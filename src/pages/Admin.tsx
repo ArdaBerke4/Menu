@@ -637,6 +637,7 @@ export default function Admin() {
   // --- DASHBOARD ---
   if (activeTab === 'dashboard') {
     return (
+      <>
       <div className="min-h-screen bg-surface p-10 font-pixel text-ink">
         <div className="max-w-6xl mx-auto">
           <div className="flex justify-between items-end border-b-4 border-brand-dark pb-6 mb-10">
@@ -667,11 +668,45 @@ export default function Admin() {
                 <button type="submit" className="w-full bg-[#8fb38a] text-brand-dark border-2 border-brand-dark px-4 py-3 font-bold hover:bg-[#a3c79e] shadow-pixel">+ OLUŞTUR</button>
               </form>
             </div>
-          </div>
         </div>
       </div>
-    );
-  }
+
+      {/* CONFIRM DIALOG */}
+      {confirmDialog.isOpen && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
+          <div className="bg-[#F4E4C1] border-4 border-brand-dark shadow-pixel p-8 max-w-md w-full text-center">
+            <div className="text-5xl mb-4">⚠️</div>
+            <h3 className="text-2xl font-bold uppercase mb-6">{confirmDialog.message}</h3>
+            <div className="flex gap-4 justify-center">
+              <button 
+                onClick={() => setConfirmDialog({ ...confirmDialog, isOpen: false })} 
+                className="px-6 py-3 bg-gray-300 border-2 border-brand-dark font-bold hover:bg-gray-400 transition-colors"
+              >
+                İPTAL
+              </button>
+              <button 
+                onClick={confirmDialog.onConfirm} 
+                className="px-6 py-3 bg-[#d97777] text-white border-2 border-brand-dark font-bold hover:bg-[#c25a5a] shadow-pixel-sm transition-transform hover:scale-105"
+              >
+                SİL
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TOAST NOTIFICATIONS */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 animate-bounce-in">
+          <div className={`px-6 py-4 border-4 shadow-pixel font-bold text-lg text-white flex items-center gap-3 ${toast.type === 'success' ? 'bg-[#8fb38a] border-[#5b7a57]' : 'bg-[#d97777] border-[#8a3c3c]'}`}>
+            <span>{toast.type === 'success' ? '✓' : '✕'}</span>
+            <span>{toast.message}</span>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
 
   return (
     <div className="min-h-screen bg-surface flex font-pixel text-ink text-xl tracking-wide relative">
