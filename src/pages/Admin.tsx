@@ -98,6 +98,50 @@ const getFontSizeClasses = (size?: string) => {
 const DEFAULT_BG_COLOR = '#F4E4C1';
 // -----------------------------
 
+function InlinePriceEdit({ product, onSave }: { product: Product, onSave: (id: string, newPrice: number) => void }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [val, setVal] = useState(product.price.toString());
+
+  const handleSave = () => {
+    setIsEditing(false);
+    const num = parseFloat(val.replace(',', '.'));
+    if (!isNaN(num) && num !== product.price && num >= 0) {
+      onSave(product.id, num);
+    } else {
+      setVal(product.price.toString());
+    }
+  };
+
+  if (!isEditing) {
+    return (
+      <div 
+        className="bg-white border-2 border-brand-dark text-brand-dark px-4 py-2 font-bold text-2xl shadow-pixel-sm shrink-0 w-[120px] text-right cursor-pointer hover:bg-brand-light transition-colors group relative"
+        onClick={() => { setIsEditing(true); setVal(product.price.toString()); }}
+        title="Fiyatı hızlıca düzenlemek için tıklayın"
+      >
+        {product.price} ₺
+        <span className="absolute -top-2 -right-2 text-xs bg-[#5b7a57] text-white px-1 opacity-0 group-hover:opacity-100 transition-opacity">✍️</span>
+      </div>
+    );
+  }
+
+  return (
+    <input 
+      autoFocus
+      type="text" 
+      inputMode="decimal"
+      className="bg-white border-2 border-brand-dark text-brand-dark px-2 py-2 font-bold text-2xl shadow-pixel-sm shrink-0 w-[120px] text-right outline-none ring-4 ring-[#8fb38a] z-10 relative"
+      value={val}
+      onChange={(e) => setVal(e.target.value)}
+      onBlur={handleSave}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') handleSave();
+        if (e.key === 'Escape') { setIsEditing(false); setVal(product.price.toString()); }
+      }}
+    />
+  );
+}
+
 function SortableCategoryItem({ category, onUp, onDown, isFirst, isLast }: any) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: category.id });
   const style = { transform: CSS.Transform.toString(transform), transition };
@@ -492,6 +536,16 @@ export default function Admin() {
         }
       }
     });
+  };
+
+  const handleInlinePriceUpdate = async (productId: string, newPrice: number) => {
+    const { error } = await supabase.from('products').update({ price: newPrice }).eq('id', productId);
+    if (!error) {
+      setProducts(products.map(p => p.id === productId ? { ...p, price: newPrice } : p));
+      showToast("Fiyat başarıyla güncellendi!");
+    } else {
+      showToast("Fiyat güncellenemedi: " + error.message, 'error');
+    }
   };
 
   const handleDeleteProduct = async (productId: string) => {
@@ -1266,7 +1320,9 @@ export default function Admin() {
                             <h3 className="font-bold text-2xl text-brand-dark uppercase truncate">{product.name}</h3>
                             <div className="text-sm font-bold text-brand bg-brand-light px-2 py-0.5 inline-block border border-brand-dark">{categories.find(c => c.id === product.category_id)?.name || 'Bilinmeyen'}</div>
                           </div>
-                          <div className="bg-white border-2 border-brand-dark text-brand-dark px-4 py-2 font-bold text-2xl shadow-pixel-sm shrink-0 w-[120px] text-right">{product.price} ₺</div>
+                          
+                          <InlinePriceEdit product={product} onSave={handleInlinePriceUpdate} />
+
                           <div className="flex gap-1 shrink-0 border-l-2 border-brand-dark pl-3">
                             <button onClick={() => moveProduct(product, 'up')} disabled={siblingIndex === 0 || !!sortByPrice} className="w-7 h-7 flex items-center justify-center bg-brand-light border-2 border-brand-dark font-bold hover:bg-white disabled:opacity-30 text-sm" title={sortByPrice ? 'Fiyat sıralaması aktifken taşıma devre dışı' : 'Yukarı Taşı'}>▲</button>
                             <button onClick={() => moveProduct(product, 'down')} disabled={siblingIndex === siblings.length - 1 || !!sortByPrice} className="w-7 h-7 flex items-center justify-center bg-brand-light border-2 border-brand-dark font-bold hover:bg-white disabled:opacity-30 text-sm" title={sortByPrice ? 'Fiyat sıralaması aktifken taşıma devre dışı' : 'Aşağı Taşı'}>▼</button>

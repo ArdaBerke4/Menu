@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabase';
 import { useParams } from 'react-router-dom';
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
@@ -150,6 +150,25 @@ export default function Menu() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortByPrice, setSortByPrice] = useState<null | 'asc' | 'desc'>(null);
+
+  // OPTIMIZATION: Memoize products by category and sort them so we don't do it on every render
+  const categoryProductsMap = React.useMemo(() => {
+    const map: Record<string, Product[]> = {};
+    categories.forEach(c => { map[c.id] = []; });
+    products.forEach(p => {
+      if (map[p.category_id]) map[p.category_id].push(p);
+    });
+    
+    // Sort products inside each category
+    for (const catId in map) {
+      map[catId].sort((a, b) => {
+        if (sortByPrice === 'asc') return a.price - b.price;
+        if (sortByPrice === 'desc') return b.price - a.price;
+        return 0; // maintain original order if no sort
+      });
+    }
+    return map;
+  }, [products, categories, sortByPrice]);
 
   // KAMPANYA
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -392,7 +411,7 @@ export default function Menu() {
               <TransformComponent wrapperStyle={{ width: "100%", height: "100%" }}>
                 <div className="w-[1200px] h-[1200px] relative">
                   {categories.map(category => {
-                    const categoryProducts = products.filter(p => p.category_id === category.id).sort((a, b) => (sortByPrice === 'asc' ? a.price - b.price : sortByPrice === 'desc' ? b.price - a.price : 0));
+                    const categoryProducts = categoryProductsMap[category.id] || [];
                     if (categoryProducts.length === 0) return null;
                     return (
                       <div key={category.id} className="absolute space-y-3" style={{ left: category.pos_x || 0, top: category.pos_y || 0, width: '300px' }}>
@@ -447,13 +466,7 @@ export default function Menu() {
         ) : (
           <div className={restaurant.layout_style === 'grid' ? "grid grid-cols-1 md:grid-cols-2 gap-8" : "space-y-10"}>
             {categories.map(category => {
-              const categoryProducts = products
-                .filter(p => p.category_id === category.id)
-                .sort((a, b) => {
-                  if (sortByPrice === 'asc') return a.price - b.price;
-                  if (sortByPrice === 'desc') return b.price - a.price;
-                  return 0;
-                });
+              const categoryProducts = categoryProductsMap[category.id] || [];
 
               if (categoryProducts.length === 0) return null;
 
