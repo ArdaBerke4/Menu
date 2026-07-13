@@ -119,6 +119,7 @@ export default function Admin() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'menu' | 'about' | 'settings' | 'campaigns'>('dashboard');
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{isOpen: boolean, message: string, onConfirm: () => void}>({ isOpen: false, message: '', onConfirm: () => {} });
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
@@ -235,16 +236,22 @@ export default function Admin() {
 
   const handleDeleteRestaurant = async (e: React.MouseEvent, restaurantId: string, restaurantName: string) => {
     e.stopPropagation();
-    if (!window.confirm(`"${restaurantName}" şubesini ve içindeki tüm menü verilerini KALICI OLARAK SİLMEK istediğine emin misin?`)) return;
-    setLoading(true);
-    const { error } = await supabase.from('restaurants').delete().eq('id', restaurantId);
-    if (!error) {
-      setMyRestaurants(myRestaurants.filter(r => r.id !== restaurantId));
-      showToast(`Şube başarıyla silindi.`);
-    } else {
-      showToast(`Silme işlemi başarısız: ${error.message}`, 'error');
-    }
-    setLoading(false);
+    setConfirmDialog({
+      isOpen: true,
+      message: `"${restaurantName}" şubesini ve içindeki tüm menü verilerini KALICI OLARAK SİLMEK istediğinize emin misiniz?`,
+      onConfirm: async () => {
+        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+        setLoading(true);
+        const { error } = await supabase.from('restaurants').delete().eq('id', restaurantId);
+        if (!error) {
+          setMyRestaurants(myRestaurants.filter(r => r.id !== restaurantId));
+          showToast(`Şube başarıyla silindi.`);
+        } else {
+          showToast(`Silme işlemi başarısız: ${error.message}`, 'error');
+        }
+        setLoading(false);
+      }
+    });
   };
 
   const handleUpdateSettings = async (e: React.FormEvent) => {
@@ -437,27 +444,39 @@ export default function Admin() {
   };
   
   const handleDeleteCategory = async (categoryId: string) => {
-    if (!confirm("Kategoriyi ve içindeki tüm ürünleri silmek istediğine emin misin?")) return;
-    const { error } = await supabase.from('categories').delete().eq('id', categoryId);
-    if (!error) {
-      setCategories(categories.filter(c => c.id !== categoryId));
-      if (selectedCategoryId === categoryId) setSelectedCategoryId(categories[0]?.id || '');
-      showToast("Kategori silindi!");
-    } else {
-      showToast("Kategori silinemedi.", 'error');
-    }
+    setConfirmDialog({
+      isOpen: true,
+      message: "Kategoriyi ve içindeki tüm ürünleri silmek istediğine emin misin?",
+      onConfirm: async () => {
+        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+        const { error } = await supabase.from('categories').delete().eq('id', categoryId);
+        if (!error) {
+          setCategories(categories.filter(c => c.id !== categoryId));
+          if (selectedCategoryId === categoryId) setSelectedCategoryId(categories[0]?.id || '');
+          showToast("Kategori silindi!");
+        } else {
+          showToast("Kategori silinemedi.", 'error');
+        }
+      }
+    });
   };
 
   const handleDeleteProduct = async (productId: string) => {
-    if (!confirm("Silmek istediğine emin misin?")) return;
-    const { error } = await supabase.from('products').delete().eq('id', productId);
-    if (!error) { 
-      setProducts(products.filter(p => p.id !== productId)); 
-      if (editingProductId === productId) resetProductForm(); 
-      showToast("Ürün silindi.");
-    } else {
-      showToast("Ürün silinemedi.", 'error');
-    }
+    setConfirmDialog({
+      isOpen: true,
+      message: "Bu ürünü kalıcı olarak silmek istediğine emin misin?",
+      onConfirm: async () => {
+        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+        const { error } = await supabase.from('products').delete().eq('id', productId);
+        if (!error) { 
+          setProducts(products.filter(p => p.id !== productId)); 
+          if (editingProductId === productId) resetProductForm(); 
+          showToast("Ürün silindi.");
+        } else {
+          showToast("Ürün silinemedi.", 'error');
+        }
+      }
+    });
   };
 
   const handleLogout = async () => { await supabase.auth.signOut(); navigate('/auth'); };
@@ -488,14 +507,20 @@ export default function Admin() {
   };
 
   const deleteCampaign = async (campaignId: string) => {
-    if (!window.confirm('Bu kampanyayı silmek istediğine emin misin?')) return;
-    const { error } = await supabase.from('campaigns').delete().eq('id', campaignId);
-    if (!error) {
-      setCampaigns(campaigns.filter(c => c.id !== campaignId));
-      showToast("Kampanya silindi.");
-    } else {
-      showToast("Kampanya silinemedi.", 'error');
-    }
+    setConfirmDialog({
+      isOpen: true,
+      message: "Bu kampanyayı silmek istediğine emin misin?",
+      onConfirm: async () => {
+        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+        const { error } = await supabase.from('campaigns').delete().eq('id', campaignId);
+        if (!error) {
+          setCampaigns(campaigns.filter(c => c.id !== campaignId));
+          showToast("Kampanya silindi.");
+        } else {
+          showToast("Kampanya silinemedi.", 'error');
+        }
+      }
+    });
   };
 
   const sortedCategories = [...categories].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
@@ -584,23 +609,29 @@ export default function Admin() {
 
   const handleBulkDelete = async () => {
     if (selectedProductIds.length === 0) return;
-    if (!window.confirm(`Seçili ${selectedProductIds.length} ürünü KALICI OLARAK SİLMEK istediğinize emin misiniz?`)) return;
-    setLoading(true);
-    try {
-      const { error } = await supabase.from('products').delete().in('id', selectedProductIds);
-      if (!error) { 
-        setProducts(products.filter(p => !selectedProductIds.includes(p.id))); 
-        setSelectedProductIds([]); 
-        showToast("Seçili ürünler başarıyla silindi."); 
-      } else {
-        showToast("Silme işlemi başarısız: " + error.message, 'error');
+    setConfirmDialog({
+      isOpen: true,
+      message: `Seçili ${selectedProductIds.length} ürünü KALICI OLARAK SİLMEK istediğinize emin misiniz?`,
+      onConfirm: async () => {
+        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+        setLoading(true);
+        try {
+          const { error } = await supabase.from('products').delete().in('id', selectedProductIds);
+          if (!error) { 
+            setProducts(products.filter(p => !selectedProductIds.includes(p.id))); 
+            setSelectedProductIds([]); 
+            showToast("Seçili ürünler başarıyla silindi."); 
+          } else {
+            showToast("Silme işlemi başarısız: " + error.message, 'error');
+          }
+        } catch (error) {
+          console.error(error);
+          showToast("Silme işlemi sırasında hata oluştu.", 'error');
+        } finally {
+          setLoading(false);
+        }
       }
-    } catch (error) {
-      console.error(error);
-      showToast("Silme işlemi sırasında hata oluştu.", 'error');
-    } finally {
-      setLoading(false);
-    }
+    });
   };
 
   // --- DASHBOARD ---
@@ -1173,6 +1204,30 @@ export default function Admin() {
           </div>
         )}
       </main>
+
+      {/* CONFIRM DIALOG */}
+      {confirmDialog.isOpen && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
+          <div className="bg-[#F4E4C1] border-4 border-brand-dark shadow-pixel p-8 max-w-md w-full text-center">
+            <div className="text-5xl mb-4">⚠️</div>
+            <h3 className="text-2xl font-bold uppercase mb-6">{confirmDialog.message}</h3>
+            <div className="flex gap-4 justify-center">
+              <button 
+                onClick={() => setConfirmDialog({ ...confirmDialog, isOpen: false })} 
+                className="px-6 py-3 bg-gray-300 border-2 border-brand-dark font-bold hover:bg-gray-400 transition-colors"
+              >
+                İPTAL
+              </button>
+              <button 
+                onClick={confirmDialog.onConfirm} 
+                className="px-6 py-3 bg-[#d97777] text-white border-2 border-brand-dark font-bold hover:bg-[#c25a5a] shadow-pixel-sm transition-transform hover:scale-105"
+              >
+                SİL
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* TOAST NOTIFICATIONS */}
       {toast && (
