@@ -275,7 +275,7 @@ export default function Menu() {
           style={{ borderColor: themeColor, color: themeColor }}
         >
           {restaurant.logo_url
-            ? <img src={restaurant.logo_url} alt="Logo" className="w-full h-full object-cover" />
+            ? <img src={restaurant.logo_url} alt="Logo" loading="lazy" className="w-full h-full object-cover" />
             : restaurant.name.charAt(0)
           }
         </div>
@@ -374,7 +374,7 @@ export default function Menu() {
                               <div className="flex gap-3 h-full">
                                 {product.image_url && (
                                   <div className={`w-14 h-14 border bg-white shrink-0 overflow-hidden ${radiusClass === 'rounded-full' ? 'rounded-full' : 'rounded-none'}`} style={{ borderColor: themeColor }}>
-                                    <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                                    <img src={product.image_url} alt={product.name} loading="lazy" className="w-full h-full object-cover" />
                                   </div>
                                 )}
                                 <div className="flex-1 leading-tight flex flex-col justify-center">
@@ -436,7 +436,7 @@ export default function Menu() {
                             className={`w-20 h-20 border-2 bg-white shrink-0 overflow-hidden ${radiusClass === 'rounded-full' ? 'rounded-full' : 'rounded-none'}`}
                             style={{ borderColor: themeColor }}
                           >
-                            <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                            <img src={product.image_url} alt={product.name} loading="lazy" className="w-full h-full object-cover" />
                           </div>
                         )}
                         <div className="flex-1 flex flex-col justify-center">

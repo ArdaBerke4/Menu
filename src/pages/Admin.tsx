@@ -457,7 +457,7 @@ export default function Admin() {
             {myRestaurants.map(rest => (
               <div key={rest.id} onClick={() => handleEnterRestaurant(rest)} className="bg-white border-4 border-brand-dark p-6 shadow-pixel cursor-pointer hover:-translate-y-2 flex flex-col items-center text-center transition-transform">
                 <div className="w-24 h-24 border-4 mb-4 flex items-center justify-center text-4xl font-bold uppercase overflow-hidden" style={{ backgroundColor: rest.primary_color || '#8B5A2B', borderColor: '#1A1A1A', color: '#FFF' }}>
-                  {rest.logo_url ? <img src={rest.logo_url} className="w-full h-full object-cover" /> : rest.name.charAt(0)}
+                  {rest.logo_url ? <img src={rest.logo_url} loading="lazy" className="w-full h-full object-cover" /> : rest.name.charAt(0)}
                 </div>
                 <h2 className="text-3xl font-bold uppercase mb-2">{rest.name}</h2>
                 <p className="bg-brand-light px-3 py-1 border-2 border-brand-dark text-sm font-bold">Yönetime Gir ➔</p>
@@ -495,7 +495,7 @@ export default function Admin() {
             <button onClick={() => setActiveTab('settings')} className={`text-left px-4 py-3 border-2 border-brand-dark transition-all ${activeTab === 'settings' ? 'bg-brand text-surface shadow-pixel' : 'bg-brand-light text-brand-dark hover:bg-white'}`}>Görünüm Ayarları</button>
           </nav>
           <div className="mt-auto pt-6 border-t-4 border-brand-dark text-center">
-            <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(menuLink)}`} alt="QR" className="w-32 h-32 mx-auto mb-3 image-pixelated" />
+            <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(menuLink)}`} alt="QR" loading="lazy" className="w-32 h-32 mx-auto mb-3 image-pixelated" />
             <button onClick={() => window.open(menuLink, '_blank')} className="w-full px-2 py-2 bg-[#8fb38a] border-2 border-brand-dark font-bold uppercase text-sm hover:bg-[#a3c79e] active:translate-y-1 shadow-pixel-sm">Menüyü Gör ↗</button>
             {selectedRestaurant && (
               <button
@@ -916,7 +916,7 @@ export default function Admin() {
                           <input type="checkbox" checked={selectedProductIds.includes(product.id)} onChange={() => toggleSelectProduct(product.id)} className="w-6 h-6 border-2 border-brand-dark accent-[#8fb38a] cursor-pointer shrink-0" />
                           {product.image_url && (
                             <div className="w-16 h-16 border-2 border-brand-dark bg-white shrink-0">
-                              <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                              <img src={product.image_url} alt={product.name} loading="lazy" className="w-full h-full object-cover" />
                             </div>
                           )}
                           <div className="flex-1 min-w-0">
