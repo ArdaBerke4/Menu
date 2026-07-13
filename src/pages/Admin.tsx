@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../supabase';
 import { useNavigate } from 'react-router-dom';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
@@ -42,6 +42,16 @@ interface Product {
   category_id: string;
   image_url?: string;
   sort_order?: number;
+}
+
+interface Campaign {
+  id: string;
+  restaurant_id: string;
+  name: string;
+  discount_percent: number;
+  category_id: string | null;
+  is_active: boolean;
+  created_at?: string;
 }
 
 const PRESET_BACKGROUNDS = [
@@ -106,8 +116,14 @@ function SortableCategoryItem({ category, onUp, onDown, isFirst, isLast }: any) 
 }
 
 export default function Admin() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'menu' | 'about' | 'settings'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'menu' | 'about' | 'settings' | 'campaigns'>('dashboard');
   const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
   const navigate = useNavigate();
 
   // TOPLU ZAM/İNDİRİM PANELİ STATE'LERİ
@@ -150,6 +166,12 @@ export default function Admin() {
   const [filterCategoryId, setFilterCategoryId] = useState('');
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [sortByPrice, setSortByPrice] = useState<null | 'asc' | 'desc'>(null);
+
+  // KAMPANYA YÖNETİMİ
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [campaignName, setCampaignName] = useState('');
+  const [campaignDiscount, setCampaignDiscount] = useState('');
+  const [campaignCategoryId, setCampaignCategoryId] = useState<string>('all');
 
   // Canlı önizleme için hesaplanan değerler
   const previewFs = getFontSizeClasses(fontSize);
@@ -195,6 +217,11 @@ export default function Admin() {
       const { data: prodData } = await supabase.from('products').select('*').in('category_id', categoryIds).order('sort_order', { ascending: true });
       if (prodData) setProducts(prodData);
     } else { setCategories([]); setProducts([]); }
+
+    // Kampanyaları çek
+    const { data: campData } = await supabase.from('campaigns').select('*').eq('restaurant_id', restaurant.id).order('created_at', { ascending: false });
+    if (campData) setCampaigns(campData);
+    else setCampaigns([]);
   };
 
   const handleCreateRestaurant = async (e: React.FormEvent) => {
@@ -202,7 +229,7 @@ export default function Admin() {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
     const { data, error } = await supabase.from('restaurants').insert([{ name: newRestaurantName, user_id: session.user.id }]).select().single();
-    if (!error && data) { setMyRestaurants([...myRestaurants, data]); setNewRestaurantName(''); alert("Yeni restoran eklendi!"); }
+    if (!error && data) { setMyRestaurants([...myRestaurants, data]); setNewRestaurantName(''); showToast("Yeni restoran eklendi!"); }
     setLoading(false);
   };
 
@@ -233,13 +260,13 @@ export default function Admin() {
       layout_style: layoutStyle,
     }).eq('id', selectedRestaurant.id).select().single();
 
-    if (error) alert("Güncelleme başarısız: " + error.message);
+    if (error) showToast("Güncelleme başarısız: " + error.message, 'error');
     else if (data) {
       setSelectedRestaurant(data);
       setBgImageUrl(finalBgImageUrl);
       setBgUploadFile(null);
       setMyRestaurants(myRestaurants.map(r => r.id === data.id ? data : r));
-      alert("Görünüm ayarları başarıyla kaydedildi!");
+      showToast("Görünüm ayarları başarıyla kaydedildi!");
     }
     setLoading(false);
   };
@@ -250,11 +277,11 @@ export default function Admin() {
       description: restaurantDescription,
       address: restaurantAddress,
     }).eq('id', selectedRestaurant.id).select().single();
-    if (error) alert("Güncelleme başarısız: " + error.message);
+    if (error) showToast("Güncelleme başarısız: " + error.message, 'error');
     else if (data) {
       setSelectedRestaurant(data);
       setMyRestaurants(myRestaurants.map(r => r.id === data.id ? data : r));
-      alert("Restoran bilgileri kaydedildi!");
+      showToast("Restoran bilgileri kaydedildi!");
     }
     setLoading(false);
   };
@@ -322,13 +349,43 @@ export default function Admin() {
       const { data: imgData } = await supabase.storage.from('product-images').upload(fileName, imageFile);
       if (imgData) imageUrl = supabase.storage.from('product-images').getPublicUrl(fileName).data.publicUrl;
     }
+    
     if (editingProductId) {
-      const { data } = await supabase.from('products').update({ name: productName, description: productDesc, price: parseFloat(productPrice), category_id: selectedCategoryId, image_url: imageUrl }).eq('id', editingProductId).select();
-      if (data) { setProducts(products.map(p => p.id === editingProductId ? data[0] : p)); resetProductForm(); }
+      const product = products.find(p => p.id === editingProductId);
+      const { data, error } = await supabase.from('products').update({ 
+        name: productName, 
+        description: productDesc, 
+        price: parseFloat(productPrice), 
+        category_id: selectedCategoryId, 
+        image_url: imageUrl,
+        sort_order: product?.sort_order 
+      }).eq('id', editingProductId).select().single();
+
+      if (error) {
+        showToast("Ürün güncellenirken hata oluştu.", 'error');
+      } else if (data) {
+        setProducts(products.map(p => p.id === data.id ? data : p));
+        resetProductForm();
+        showToast("Ürün başarıyla güncellendi!");
+      }
     } else {
-      const siblingCount = products.filter(p => p.category_id === selectedCategoryId).length;
-      const { data } = await supabase.from('products').insert([{ name: productName, description: productDesc, price: parseFloat(productPrice), category_id: selectedCategoryId, image_url: imageUrl, sort_order: siblingCount }]).select();
-      if (data) { setProducts([...products, data[0]]); resetProductForm(); }
+      const nextOrder = products.filter(p => p.category_id === selectedCategoryId).length;
+      const { data, error } = await supabase.from('products').insert([{ 
+        name: productName, 
+        description: productDesc, 
+        price: parseFloat(productPrice), 
+        category_id: selectedCategoryId, 
+        image_url: imageUrl, 
+        sort_order: nextOrder 
+      }]).select().single();
+      
+      if (error) {
+        showToast("Ürün eklenirken hata oluştu.", 'error');
+      } else if (data) {
+        setProducts([...products, data]);
+        resetProductForm();
+        showToast("Ürün başarıyla eklendi!");
+      }
     }
     setLoading(false);
   };
@@ -364,14 +421,68 @@ export default function Admin() {
     setEditingProductId(null); setProductName(''); setProductDesc(''); setProductPrice(''); setImageFile(null);
     const fileInput = document.getElementById('imageInput') as HTMLInputElement; if (fileInput) fileInput.value = '';
   };
+  
+  const handleDeleteCategory = async (categoryId: string) => {
+    if (!confirm("Kategoriyi ve içindeki tüm ürünleri silmek istediğine emin misin?")) return;
+    const { error } = await supabase.from('categories').delete().eq('id', categoryId);
+    if (!error) {
+      setCategories(categories.filter(c => c.id !== categoryId));
+      if (selectedCategoryId === categoryId) setSelectedCategoryId(categories[0]?.id || '');
+      showToast("Kategori silindi!");
+    } else {
+      showToast("Kategori silinemedi.", 'error');
+    }
+  };
+
   const handleDeleteProduct = async (productId: string) => {
-    if (!window.confirm("Silmek istediğine emin misin?")) return;
+    if (!confirm("Silmek istediğine emin misin?")) return;
     const { error } = await supabase.from('products').delete().eq('id', productId);
-    if (!error) { setProducts(products.filter(p => p.id !== productId)); if (editingProductId === productId) resetProductForm(); }
+    if (!error) { 
+      setProducts(products.filter(p => p.id !== productId)); 
+      if (editingProductId === productId) resetProductForm(); 
+      showToast("Ürün silindi.");
+    } else {
+      showToast("Ürün silinemedi.", 'error');
+    }
   };
 
   const handleLogout = async () => { await supabase.auth.signOut(); navigate('/auth'); };
   const menuLink = selectedRestaurant ? `${window.location.origin}/menu/${selectedRestaurant.id}` : '';
+
+  // KAMPANYA CRUD
+  const handleCreateCampaign = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedRestaurant) return;
+    const discount = parseFloat(campaignDiscount.replace(',', '.'));
+    if (isNaN(discount) || discount <= 0 || discount > 100) { showToast('Geçerli bir yüzde girin (1-100).', 'error'); return; }
+    setLoading(true);
+    const { data, error } = await supabase.from('campaigns').insert([{
+      restaurant_id: selectedRestaurant.id,
+      name: campaignName || 'Kampanya',
+      discount_percent: discount,
+      category_id: campaignCategoryId === 'all' ? null : campaignCategoryId,
+      is_active: true,
+    }]).select().single();
+    if (error) showToast('Kampanya oluşturulamadı: ' + error.message, 'error');
+    else if (data) { setCampaigns([data, ...campaigns]); setCampaignName(''); setCampaignDiscount(''); setCampaignCategoryId('all'); showToast("Kampanya başarıyla oluşturuldu!"); }
+    setLoading(false);
+  };
+
+  const toggleCampaignActive = async (campaign: Campaign) => {
+    const { data } = await supabase.from('campaigns').update({ is_active: !campaign.is_active }).eq('id', campaign.id).select().single();
+    if (data) setCampaigns(campaigns.map(c => c.id === campaign.id ? data : c));
+  };
+
+  const deleteCampaign = async (campaignId: string) => {
+    if (!window.confirm('Bu kampanyayı silmek istediğine emin misin?')) return;
+    const { error } = await supabase.from('campaigns').delete().eq('id', campaignId);
+    if (!error) {
+      setCampaigns(campaigns.filter(c => c.id !== campaignId));
+      showToast("Kampanya silindi.");
+    } else {
+      showToast("Kampanya silinemedi.", 'error');
+    }
+  };
 
   const sortedCategories = [...categories].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
   const filteredProducts = products
@@ -391,6 +502,19 @@ export default function Admin() {
       return (a.sort_order ?? 0) - (b.sort_order ?? 0);
     });
 
+  // Kategoriye göre ürünleri grupla (performans için)
+  const productsByCategoryId = useMemo(() => {
+    const grouped: Record<string, Product[]> = {};
+    for (const p of products) {
+      if (!grouped[p.category_id]) grouped[p.category_id] = [];
+      grouped[p.category_id].push(p);
+    }
+    for (const catId in grouped) {
+      grouped[catId].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+    }
+    return grouped;
+  }, [products]);
+
   const toggleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) setSelectedProductIds(filteredProducts.map(p => p.id));
     else setSelectedProductIds([]);
@@ -403,12 +527,12 @@ export default function Admin() {
   const handleApplyBulkAction = async () => {
     if (!bulkMode || selectedProductIds.length === 0) return;
     const value = parseFloat(bulkValue.replace(',', '.'));
-    if (isNaN(value) || value <= 0) { alert("Lütfen geçerli bir sayı gir."); return; }
+    if (isNaN(value) || value <= 0) { showToast("Lütfen geçerli bir sayı gir.", 'error'); return; }
     setLoading(true);
     try {
-      const updatePromises = selectedProductIds.map(id => {
+      const updatedProductsToUpsert = selectedProductIds.map(id => {
         const product = products.find(p => p.id === id);
-        if (!product) return Promise.resolve(null);
+        if (!product) return null;
         let newPrice: number;
         if (bulkValueType === 'percent') {
           const multiplier = bulkMode === 'increase' ? (1 + value / 100) : (1 - value / 100);
@@ -417,31 +541,52 @@ export default function Admin() {
           newPrice = bulkMode === 'increase' ? product.price + value : product.price - value;
         }
         newPrice = Math.max(0, parseFloat(newPrice.toFixed(2)));
-        return supabase.from('products').update({ price: newPrice }).eq('id', id).select().single();
-      });
-      const results = await Promise.all(updatePromises);
-      const updatedProductsList = [...products];
-      results.forEach(res => {
-        if (res?.data) {
-          const index = updatedProductsList.findIndex(p => p.id === res.data.id);
-          if (index !== -1) updatedProductsList[index] = res.data;
-        }
-      });
-      setProducts(updatedProductsList);
+        return { ...product, price: newPrice };
+      }).filter(Boolean) as Product[];
+
+      const { data, error } = await supabase.from('products').upsert(updatedProductsToUpsert).select();
+      
+      if (error) throw error;
+
+      if (data) {
+        const updatedProductsList = [...products];
+        data.forEach(res => {
+          const index = updatedProductsList.findIndex(p => p.id === res.id);
+          if (index !== -1) updatedProductsList[index] = res;
+        });
+        setProducts(updatedProductsList);
+      }
+
       setSelectedProductIds([]);
       setBulkMode(null); setBulkValue('');
-      alert("İşlem başarılı!");
-    } catch { alert("Toplu işlem sırasında bir hata oluştu."); }
-    setLoading(false);
+      showToast("Toplu işlem başarıyla uygulandı!");
+    } catch (error) { 
+      console.error(error);
+      showToast("Toplu işlem sırasında bir hata oluştu.", 'error'); 
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleBulkDelete = async () => {
     if (selectedProductIds.length === 0) return;
     if (!window.confirm(`Seçili ${selectedProductIds.length} ürünü KALICI OLARAK SİLMEK istediğinize emin misiniz?`)) return;
     setLoading(true);
-    const { error } = await supabase.from('products').delete().in('id', selectedProductIds);
-    if (!error) { setProducts(products.filter(p => !selectedProductIds.includes(p.id))); setSelectedProductIds([]); alert("Seçili ürünler başarıyla silindi."); }
-    setLoading(false);
+    try {
+      const { error } = await supabase.from('products').delete().in('id', selectedProductIds);
+      if (!error) { 
+        setProducts(products.filter(p => !selectedProductIds.includes(p.id))); 
+        setSelectedProductIds([]); 
+        showToast("Seçili ürünler başarıyla silindi."); 
+      } else {
+        showToast("Silme işlemi başarısız: " + error.message, 'error');
+      }
+    } catch (error) {
+      console.error(error);
+      showToast("Silme işlemi sırasında hata oluştu.", 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // --- DASHBOARD ---
@@ -491,6 +636,7 @@ export default function Admin() {
           </div>
           <nav className="flex flex-col gap-3 flex-grow">
             <button onClick={() => setActiveTab('menu')} className={`text-left px-4 py-3 border-2 border-brand-dark transition-all ${activeTab === 'menu' ? 'bg-brand text-surface shadow-pixel' : 'bg-brand-light text-brand-dark hover:bg-white'}`}>Envanter (Menü)</button>
+            <button onClick={() => setActiveTab('campaigns')} className={`text-left px-4 py-3 border-2 border-brand-dark transition-all ${activeTab === 'campaigns' ? 'bg-brand text-surface shadow-pixel' : 'bg-brand-light text-brand-dark hover:bg-white'}`}>Kampanya Düzenle 🏷️</button>
             <button onClick={() => setActiveTab('about')} className={`text-left px-4 py-3 border-2 border-brand-dark transition-all ${activeTab === 'about' ? 'bg-brand text-surface shadow-pixel' : 'bg-brand-light text-brand-dark hover:bg-white'}`}>Restoran Hakkında</button>
             <button onClick={() => setActiveTab('settings')} className={`text-left px-4 py-3 border-2 border-brand-dark transition-all ${activeTab === 'settings' ? 'bg-brand text-surface shadow-pixel' : 'bg-brand-light text-brand-dark hover:bg-white'}`}>Görünüm Ayarları</button>
           </nav>
@@ -511,6 +657,70 @@ export default function Admin() {
 
       {/* ANA İÇERİK */}
       <main className="flex-1 p-8 ml-12 overflow-y-auto h-screen bg-surface">
+
+        {/* ===== KAMPANYA DÜZENLE ===== */}
+        {activeTab === 'campaigns' && selectedRestaurant && (
+          <div className="max-w-3xl mx-auto">
+            <header className="mb-8">
+              <h1 className="text-4xl font-bold uppercase mb-2">🏷️ Kampanya Düzenle</h1>
+              <p className="text-lg text-brand-dark/60 font-bold">Kategoriye veya tüm ürünlere indirim kampanyası uygula. Kampanyalar gerçek fiyatları değiştirmez, sadece müşteri menüsünde üzeri çizili eski fiyat + yeni fiyat gösterilir.</p>
+            </header>
+
+            {/* Yeni Kampanya Formu */}
+            <form onSubmit={handleCreateCampaign} className="bg-[#F4E4C1] border-4 border-brand-dark shadow-pixel p-6 mb-8">
+              <h2 className="text-2xl font-bold uppercase mb-4 border-b-2 border-brand-dark pb-2">Yeni Kampanya Oluştur</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block font-bold mb-1">Kampanya Adı</label>
+                  <input value={campaignName} onChange={e => setCampaignName(e.target.value)} placeholder="Ör: Yaz İndirimi" className="w-full px-4 py-3 border-2 border-brand-dark bg-white focus:outline-none" />
+                </div>
+                <div>
+                  <label className="block font-bold mb-1">İndirim Yüzdesi (%)</label>
+                  <input value={campaignDiscount} onChange={e => setCampaignDiscount(e.target.value)} placeholder="Ör: 20" type="text" inputMode="decimal" className="w-full px-4 py-3 border-2 border-brand-dark bg-white focus:outline-none" required />
+                </div>
+              </div>
+              <div className="mb-4">
+                <label className="block font-bold mb-1">Hedef</label>
+                <select value={campaignCategoryId} onChange={e => setCampaignCategoryId(e.target.value)} className="w-full px-4 py-3 border-2 border-brand-dark bg-white focus:outline-none">
+                  <option value="all">TÜM ÜRÜNLER</option>
+                  {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+                </select>
+              </div>
+              <button type="submit" disabled={loading} className="w-full py-3 bg-brand text-surface border-2 border-brand-dark font-bold uppercase text-xl hover:opacity-90 active:translate-y-1 shadow-pixel disabled:opacity-50">
+                {loading ? 'Oluşturuluyor...' : 'Kampanya Oluştur ✓'}
+              </button>
+            </form>
+
+            {/* Mevcut Kampanyalar */}
+            <div className="bg-[#F4E4C1] border-4 border-brand-dark shadow-pixel p-6">
+              <h2 className="text-2xl font-bold uppercase mb-4 border-b-2 border-brand-dark pb-2">Mevcut Kampanyalar</h2>
+              {campaigns.length === 0 ? (
+                <p className="text-center opacity-60 font-bold py-8">Henüz kampanya yok. Yukarıdan oluşturabilirsin.</p>
+              ) : (
+                <div className="space-y-3">
+                  {campaigns.map(camp => (
+                    <div key={camp.id} className={`flex items-center justify-between gap-4 p-4 border-2 border-brand-dark transition-all ${camp.is_active ? 'bg-white' : 'bg-gray-200 opacity-60'}`}>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-xl truncate">{camp.name}</div>
+                        <div className="text-sm font-bold opacity-70">
+                          %{camp.discount_percent} indirim • {camp.category_id ? categories.find(c => c.id === camp.category_id)?.name || 'Silinmiş Kategori' : 'Tüm Ürünler'}
+                        </div>
+                      </div>
+                      <div className="flex gap-2 shrink-0">
+                        <button onClick={() => toggleCampaignActive(camp)} className={`px-4 py-2 border-2 border-brand-dark font-bold text-sm transition-all active:scale-95 ${camp.is_active ? 'bg-[#8fb38a] text-brand-dark' : 'bg-white text-brand-dark'}`}>
+                          {camp.is_active ? 'AKTİF ✓' : 'PASİF'}
+                        </button>
+                        <button onClick={() => deleteCampaign(camp.id)} className="px-4 py-2 border-2 border-brand-dark bg-red-100 text-red-700 font-bold text-sm hover:bg-red-200 transition-all active:scale-95">
+                          SİL
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* ===== RESTORAN HAKKINDA ===== */}
         {activeTab === 'about' && selectedRestaurant && (
@@ -828,7 +1038,7 @@ export default function Admin() {
                   </div>
                   <div>
                     <label className="block font-bold mb-1">Fiyat (₺)</label>
-                    <input type="number" required min="0" step="0.01" value={productPrice} onChange={(e) => setProductPrice(e.target.value)} placeholder="Örn: 120" className="w-full px-4 py-2 border-2 border-brand-dark bg-white focus:outline-none" />
+                    <input type="text" inputMode="decimal" required value={productPrice} onChange={(e) => setProductPrice(e.target.value)} placeholder="Örn: 120" className="w-full px-4 py-2 border-2 border-brand-dark bg-white focus:outline-none" />
                   </div>
                   <div className="flex gap-4 pt-2">
                     <button type="submit" disabled={loading} className="flex-1 bg-brand text-surface border-2 border-brand-dark px-4 py-3 text-lg shadow-pixel hover:opacity-90">
@@ -885,7 +1095,7 @@ export default function Admin() {
                           <button type="button" onClick={() => setBulkValueType('fixed')} className={`px-3 py-2 font-bold border-l-2 border-brand-dark ${bulkValueType === 'fixed' ? 'bg-brand text-surface' : 'bg-white text-brand-dark'}`}>Sabit Tutar (₺)</button>
                         </div>
                         <div className="flex items-center border-2 border-brand-dark">
-                          <input type="number" min="0" step="0.01" value={bulkValue} onChange={(e) => setBulkValue(e.target.value)} placeholder="0" className="w-24 px-3 py-2 focus:outline-none text-right" autoFocus />
+                          <input type="text" inputMode="decimal" value={bulkValue} onChange={(e) => setBulkValue(e.target.value)} placeholder="0" className="w-24 px-3 py-2 focus:outline-none text-right" autoFocus />
                           <span className="px-3 py-2 bg-brand-light border-l-2 border-brand-dark font-bold">{bulkValueType === 'percent' ? '%' : '₺'}</span>
                         </div>
                         <button type="button" onClick={handleApplyBulkAction} disabled={loading || !bulkValue} className="bg-[#8fb38a] text-surface font-bold border-2 border-brand-dark px-5 py-2 shadow-pixel-sm hover:scale-105 disabled:opacity-50">{loading ? 'UYGULANIYOR...' : 'UYGULA'}</button>
@@ -909,7 +1119,7 @@ export default function Admin() {
                     <div className="text-center py-10 font-bold text-brand-dark/50">Bu kriterlere uygun ürün bulunamadı.</div>
                   ) : (
                     filteredProducts.map(product => {
-                      const siblings = products.filter(p => p.category_id === product.category_id).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+                      const siblings = productsByCategoryId[product.category_id] || [];
                       const siblingIndex = siblings.findIndex(p => p.id === product.id);
                       return (
                         <div key={product.id} className={`border-2 border-brand-dark p-3 flex gap-4 items-center transition-all ${selectedProductIds.includes(product.id) ? 'bg-[#e8f4e1]' : 'bg-surface hover:bg-gray-50'}`}>
@@ -942,6 +1152,16 @@ export default function Admin() {
           </div>
         )}
       </main>
+
+      {/* TOAST NOTIFICATIONS */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 animate-bounce-in">
+          <div className={`px-6 py-4 border-4 shadow-pixel font-bold text-lg text-white flex items-center gap-3 ${toast.type === 'success' ? 'bg-[#8fb38a] border-[#5b7a57]' : 'bg-[#d97777] border-[#8a3c3c]'}`}>
+            <span>{toast.type === 'success' ? '✓' : '✕'}</span>
+            <span>{toast.message}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

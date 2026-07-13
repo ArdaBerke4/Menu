@@ -22,6 +22,7 @@ interface Restaurant {
 interface Category { id: string; name: string; restaurant_id: string; pos_x?: number; pos_y?: number; }
 interface Product { id: string; name: string; description?: string; price: number; category_id: string; image_url?: string; }
 interface CartItem { product: Product; quantity: number; }
+interface Campaign { id: string; restaurant_id: string; name: string; discount_percent: number; category_id: string | null; is_active: boolean; }
 
 // --- DİL SİSTEMİ ---
 type LangCode = 'tr' | 'en' | 'de' | 'ar' | 'ru' | 'fr';
@@ -150,6 +151,9 @@ export default function Menu() {
   const [loading, setLoading] = useState(true);
   const [sortByPrice, setSortByPrice] = useState<null | 'asc' | 'desc'>(null);
 
+  // KAMPANYA
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+
   // SEPET STATE'İ
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
@@ -175,7 +179,11 @@ export default function Menu() {
   };
 
   const cartTotalItems = cart.reduce((acc, item) => acc + item.quantity, 0);
-  const cartTotalPrice = cart.reduce((acc, item) => acc + (item.product.price * item.quantity), 0);
+  const cartTotalPrice = cart.reduce((acc, item) => {
+    const priceInfo = getDiscountedPrice(item.product);
+    const effectivePrice = priceInfo.discounted ?? priceInfo.original;
+    return acc + (effectivePrice * item.quantity);
+  }, 0);
 
   // DİL STATE'İ
   const [lang, setLang] = useState<LangCode>(detectLang);
@@ -213,11 +221,34 @@ export default function Menu() {
           const { data: prodData } = await supabase.from('products').select('*').in('category_id', categoryIds);
           if (prodData) setProducts(prodData);
         }
+        // Kampanyaları çek
+        const { data: campData } = await supabase.from('campaigns').select('*').eq('restaurant_id', restData.id).eq('is_active', true);
+        if (campData) setCampaigns(campData);
       }
       setLoading(false);
     };
     fetchMenu();
   }, [id]);
+
+  // Kampanyalı fiyat hesapla
+  const getDiscountedPrice = (product: Product): { original: number; discounted: number | null; percent: number } => {
+    // En yüksek indirimi uygula (birden fazla kampanya varsa)
+    let maxDiscount = 0;
+    for (const camp of campaigns) {
+      if (!camp.is_active) continue;
+      if (camp.category_id === null || camp.category_id === product.category_id) {
+        if (camp.discount_percent > maxDiscount) maxDiscount = camp.discount_percent;
+      }
+    }
+    if (maxDiscount > 0) {
+      return {
+        original: product.price,
+        discounted: parseFloat((product.price * (1 - maxDiscount / 100)).toFixed(2)),
+        percent: maxDiscount
+      };
+    }
+    return { original: product.price, discounted: null, percent: 0 };
+  };
 
   const t = T[lang];
   const isRTL = LANGUAGES[lang].rtl ?? false;
@@ -369,7 +400,9 @@ export default function Menu() {
                           {category.name}
                         </div>
                         <div className="space-y-2">
-                          {categoryProducts.map(product => (
+                          {categoryProducts.map(product => {
+                            const priceInfo = getDiscountedPrice(product);
+                            return (
                             <div key={product.id} className={`bg-white/95 border-2 p-3 shadow-sm flex flex-col gap-2 ${radiusClass}`} style={{ borderColor: themeColor }}>
                               <div className="flex gap-3 h-full">
                                 {product.image_url && (
@@ -382,7 +415,15 @@ export default function Menu() {
                                   {product.description && <p className={`text-ink/80 leading-snug mt-1 ${fs.desc}`}>{product.description}</p>}
                                 </div>
                                 <div className="flex flex-col justify-between items-end shrink-0 gap-1">
-                                  <div className={`font-bold ${fs.price}`} style={{ color: themeColor }}>{product.price} ₺</div>
+                                  {priceInfo.discounted !== null ? (
+                                    <>
+                                      <span className="text-xs font-bold px-2 py-0.5 bg-red-500 text-white" style={{ borderRadius: borderRadiusValue }}>%{priceInfo.percent}</span>
+                                      <span className="line-through opacity-50 text-sm font-bold" style={{ color: themeColor }}>{priceInfo.original} ₺</span>
+                                      <span className={`font-bold ${fs.price}`} style={{ color: themeColor }}>{priceInfo.discounted} ₺</span>
+                                    </>
+                                  ) : (
+                                    <div className={`font-bold ${fs.price}`} style={{ color: themeColor }}>{product.price} ₺</div>
+                                  )}
                                   <button
                                     onClick={() => addToCart(product)}
                                     className={`w-8 h-8 flex items-center justify-center border-2 font-bold text-lg transition-all hover:scale-105 active:scale-95 ${radiusClass}`}
@@ -393,7 +434,8 @@ export default function Menu() {
                                 </div>
                               </div>
                             </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     );
@@ -425,7 +467,9 @@ export default function Menu() {
                   </div>
 
                   <div className={restaurant.layout_style === 'grid' ? "grid grid-cols-1 gap-4" : "space-y-4"}>
-                    {categoryProducts.map(product => (
+                    {categoryProducts.map(product => {
+                      const priceInfo = getDiscountedPrice(product);
+                      return (
                       <div
                         key={product.id}
                         className={`bg-white/95 border-4 p-4 shadow-sm flex gap-4 backdrop-blur-sm ${radiusClass}`}
@@ -448,12 +492,25 @@ export default function Menu() {
                           )}
                         </div>
                         <div className="flex flex-col justify-between items-end shrink-0 gap-2">
-                          <div
-                            className={`bg-white border-2 px-3 py-1 font-bold whitespace-nowrap ${radiusClass} ${fs.price}`}
-                            style={{ borderColor: themeColor, color: themeColor }}
-                          >
-                            {product.price} ₺
-                          </div>
+                          {priceInfo.discounted !== null ? (
+                            <>
+                              <span className="text-xs font-bold px-2 py-0.5 bg-red-500 text-white" style={{ borderRadius: borderRadiusValue }}>%{priceInfo.percent}</span>
+                              <span className="line-through opacity-50 text-sm font-bold" style={{ color: themeColor }}>{priceInfo.original} ₺</span>
+                              <div
+                                className={`bg-white border-2 px-3 py-1 font-bold whitespace-nowrap ${radiusClass} ${fs.price}`}
+                                style={{ borderColor: themeColor, color: themeColor }}
+                              >
+                                {priceInfo.discounted} ₺
+                              </div>
+                            </>
+                          ) : (
+                            <div
+                              className={`bg-white border-2 px-3 py-1 font-bold whitespace-nowrap ${radiusClass} ${fs.price}`}
+                              style={{ borderColor: themeColor, color: themeColor }}
+                            >
+                              {product.price} ₺
+                            </div>
+                          )}
                           <button
                             onClick={() => addToCart(product)}
                             className={`w-10 h-10 flex items-center justify-center border-2 font-bold text-2xl transition-all hover:scale-105 active:scale-95 ${radiusClass}`}
@@ -463,7 +520,8 @@ export default function Menu() {
                           </button>
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               );
