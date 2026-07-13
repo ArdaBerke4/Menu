@@ -233,6 +233,20 @@ export default function Admin() {
     setLoading(false);
   };
 
+  const handleDeleteRestaurant = async (e: React.MouseEvent, restaurantId: string, restaurantName: string) => {
+    e.stopPropagation();
+    if (!window.confirm(`"${restaurantName}" şubesini ve içindeki tüm menü verilerini KALICI OLARAK SİLMEK istediğine emin misin?`)) return;
+    setLoading(true);
+    const { error } = await supabase.from('restaurants').delete().eq('id', restaurantId);
+    if (!error) {
+      setMyRestaurants(myRestaurants.filter(r => r.id !== restaurantId));
+      showToast(`Şube başarıyla silindi.`);
+    } else {
+      showToast(`Silme işlemi başarısız: ${error.message}`, 'error');
+    }
+    setLoading(false);
+  };
+
   const handleUpdateSettings = async (e: React.FormEvent) => {
     e.preventDefault(); if (!selectedRestaurant) return; setLoading(true);
     let finalLogoUrl = selectedRestaurant.logo_url;
@@ -600,7 +614,14 @@ export default function Admin() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {myRestaurants.map(rest => (
-              <div key={rest.id} onClick={() => handleEnterRestaurant(rest)} className="bg-white border-4 border-brand-dark p-6 shadow-pixel cursor-pointer hover:-translate-y-2 flex flex-col items-center text-center transition-transform">
+              <div key={rest.id} onClick={() => handleEnterRestaurant(rest)} className="relative bg-white border-4 border-brand-dark p-6 shadow-pixel cursor-pointer hover:-translate-y-2 flex flex-col items-center text-center transition-transform group">
+                <button 
+                  onClick={(e) => handleDeleteRestaurant(e, rest.id, rest.name)}
+                  className="absolute top-2 right-2 bg-[#d97777] text-white border-2 border-brand-dark w-8 h-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#c25a5a] shadow-pixel-sm font-bold"
+                  title="Şubeyi Sil"
+                >
+                  ✕
+                </button>
                 <div className="w-24 h-24 border-4 mb-4 flex items-center justify-center text-4xl font-bold uppercase overflow-hidden" style={{ backgroundColor: rest.primary_color || '#8B5A2B', borderColor: '#1A1A1A', color: '#FFF' }}>
                   {rest.logo_url ? <img src={rest.logo_url} loading="lazy" className="w-full h-full object-cover" /> : rest.name.charAt(0)}
                 </div>
