@@ -21,6 +21,7 @@ interface Restaurant {
 
 interface Category { id: string; name: string; restaurant_id: string; pos_x?: number; pos_y?: number; }
 interface Product { id: string; name: string; description?: string; price: number; category_id: string; image_url?: string; }
+interface CartItem { product: Product; quantity: number; }
 
 // --- DİL SİSTEMİ ---
 type LangCode = 'tr' | 'en' | 'de' | 'ar' | 'ru' | 'fr';
@@ -44,6 +45,9 @@ const T: Record<LangCode, {
   notFound: string;
   developer: string;
   mapsLink: string;
+  cart: string;
+  total: string;
+  emptyCart: string;
 }> = {
   tr: {
     subtitle: '~ Dijital Menü ~',
@@ -55,6 +59,7 @@ const T: Record<LangCode, {
     notFound: 'Böyle bir menü bulunamadı (Geçersiz QR).',
     developer: 'Geliştirici: Arda Berke Aday',
     mapsLink: 'Haritada Göster ↗',
+    cart: 'Sepetim', total: 'Toplam', emptyCart: 'Sepetiniz boş.',
   },
   en: {
     subtitle: '~ Digital Menu ~',
@@ -66,6 +71,7 @@ const T: Record<LangCode, {
     notFound: 'Menu not found (Invalid QR code).',
     developer: 'Developer: Arda Berke Aday',
     mapsLink: 'View on Maps ↗',
+    cart: 'My Cart', total: 'Total', emptyCart: 'Your cart is empty.',
   },
   de: {
     subtitle: '~ Digitale Speisekarte ~',
@@ -77,6 +83,7 @@ const T: Record<LangCode, {
     notFound: 'Menü nicht gefunden (Ungültiger QR-Code).',
     developer: 'Entwickler: Arda Berke Aday',
     mapsLink: 'Auf Karte anzeigen ↗',
+    cart: 'Warenkorb', total: 'Gesamt', emptyCart: 'Warenkorb ist leer.',
   },
   ar: {
     subtitle: '~ القائمة الرقمية ~',
@@ -88,6 +95,7 @@ const T: Record<LangCode, {
     notFound: '.(القائمة غير موجودة (رمز QR غير صالح',
     developer: 'المطوّر: Arda Berke Aday',
     mapsLink: '↗ عرض على الخريطة',
+    cart: 'عربة التسوق', total: 'المجموع', emptyCart: 'عربة التسوق فارغة.',
   },
   ru: {
     subtitle: '~ Цифровое Меню ~',
@@ -99,6 +107,7 @@ const T: Record<LangCode, {
     notFound: 'Меню не найдено (Недействительный QR-код).',
     developer: 'Разработчик: Arda Berke Aday',
     mapsLink: 'Показать на карте ↗',
+    cart: 'Корзина', total: 'Итого', emptyCart: 'Ваша корзина пуста.',
   },
   fr: {
     subtitle: '~ Menu Numérique ~',
@@ -110,6 +119,7 @@ const T: Record<LangCode, {
     notFound: 'Menu introuvable (QR code invalide).',
     developer: 'Développeur: Arda Berke Aday',
     mapsLink: 'Voir sur Maps ↗',
+    cart: 'Mon Panier', total: 'Total', emptyCart: 'Votre panier est vide.',
   },
 };
 
@@ -139,6 +149,33 @@ export default function Menu() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortByPrice, setSortByPrice] = useState<null | 'asc' | 'desc'>(null);
+
+  // SEPET STATE'İ
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cartOpen, setCartOpen] = useState(false);
+
+  const addToCart = (product: Product) => {
+    setCart(prev => {
+      const existing = prev.find(item => item.product.id === product.id);
+      if (existing) {
+        return prev.map(item => item.product.id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
+      }
+      return [...prev, { product, quantity: 1 }];
+    });
+  };
+
+  const updateQuantity = (productId: string, delta: number) => {
+    setCart(prev => prev.map(item => {
+      if (item.product.id === productId) {
+        const newQ = item.quantity + delta;
+        return newQ > 0 ? { ...item, quantity: newQ } : null;
+      }
+      return item;
+    }).filter(Boolean) as CartItem[]);
+  };
+
+  const cartTotalItems = cart.reduce((acc, item) => acc + item.quantity, 0);
+  const cartTotalPrice = cart.reduce((acc, item) => acc + (item.product.price * item.quantity), 0);
 
   // DİL STATE'İ
   const [lang, setLang] = useState<LangCode>(detectLang);
@@ -334,18 +371,27 @@ export default function Menu() {
                         <div className="space-y-2">
                           {categoryProducts.map(product => (
                             <div key={product.id} className={`bg-white/95 border-2 p-3 shadow-sm flex flex-col gap-2 ${radiusClass}`} style={{ borderColor: themeColor }}>
-                              <div className="flex gap-3">
+                              <div className="flex gap-3 h-full">
                                 {product.image_url && (
                                   <div className={`w-14 h-14 border bg-white shrink-0 overflow-hidden ${radiusClass === 'rounded-full' ? 'rounded-full' : 'rounded-none'}`} style={{ borderColor: themeColor }}>
                                     <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
                                   </div>
                                 )}
-                                <div className="flex-1 leading-tight">
+                                <div className="flex-1 leading-tight flex flex-col justify-center">
                                   <h3 className={`font-bold uppercase ${fs.product}`} style={{ color: themeColor }}>{product.name}</h3>
-                                  <div className={`font-bold mt-1 ${fs.price}`} style={{ color: themeColor }}>{product.price} ₺</div>
+                                  {product.description && <p className={`text-ink/80 leading-snug mt-1 ${fs.desc}`}>{product.description}</p>}
+                                </div>
+                                <div className="flex flex-col justify-between items-end shrink-0 gap-1">
+                                  <div className={`font-bold ${fs.price}`} style={{ color: themeColor }}>{product.price} ₺</div>
+                                  <button
+                                    onClick={() => addToCart(product)}
+                                    className={`w-8 h-8 flex items-center justify-center border-2 font-bold text-lg transition-all hover:scale-105 active:scale-95 ${radiusClass}`}
+                                    style={{ borderColor: themeColor, backgroundColor: themeColor, color: 'white' }}
+                                  >
+                                    +
+                                  </button>
                                 </div>
                               </div>
-                              {product.description && <p className={`text-ink/80 leading-snug ${fs.desc}`}>{product.description}</p>}
                             </div>
                           ))}
                         </div>
@@ -393,7 +439,7 @@ export default function Menu() {
                             <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
                           </div>
                         )}
-                        <div className="flex-1">
+                        <div className="flex-1 flex flex-col justify-center">
                           <h3 className={`font-bold uppercase leading-none mb-2 ${fs.product}`} style={{ color: themeColor }}>
                             {product.name}
                           </h3>
@@ -401,11 +447,20 @@ export default function Menu() {
                             <p className={`text-ink/80 leading-snug ${fs.desc}`}>{product.description}</p>
                           )}
                         </div>
-                        <div
-                          className={`bg-white border-2 px-3 py-2 font-bold h-fit whitespace-nowrap self-center ${radiusClass} ${fs.price}`}
-                          style={{ borderColor: themeColor, color: themeColor }}
-                        >
-                          {product.price} ₺
+                        <div className="flex flex-col justify-between items-end shrink-0 gap-2">
+                          <div
+                            className={`bg-white border-2 px-3 py-1 font-bold whitespace-nowrap ${radiusClass} ${fs.price}`}
+                            style={{ borderColor: themeColor, color: themeColor }}
+                          >
+                            {product.price} ₺
+                          </div>
+                          <button
+                            onClick={() => addToCart(product)}
+                            className={`w-10 h-10 flex items-center justify-center border-2 font-bold text-2xl transition-all hover:scale-105 active:scale-95 ${radiusClass}`}
+                            style={{ borderColor: themeColor, backgroundColor: themeColor, color: 'white' }}
+                          >
+                            +
+                          </button>
                         </div>
                       </div>
                     ))}
@@ -466,6 +521,71 @@ export default function Menu() {
           </span>
         </button>
       </div>
+
+      {/* SEPET BUTONU */}
+      {cartTotalItems > 0 && (
+        <button
+          onClick={() => setCartOpen(true)}
+          className="fixed bottom-6 left-6 z-50 flex items-center gap-3 px-5 py-3 font-bold border-4 shadow-xl transition-all hover:scale-105 active:scale-95"
+          style={{
+            backgroundColor: 'white',
+            borderColor: themeColor,
+            color: themeColor,
+            borderRadius: restaurant.button_shape === 'pill' ? '999px' : restaurant.button_shape === 'rounded' ? '1rem' : '0px',
+            boxShadow: `0 4px 15px ${themeColor}40`,
+          }}
+        >
+          <span className="text-2xl">🛒</span>
+          <span className="text-xl">{cartTotalItems}</span>
+        </button>
+      )}
+
+      {/* SEPET MODAL */}
+      {cartOpen && (
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setCartOpen(false)}>
+          <div 
+            className="w-full max-w-md bg-white border-4 shadow-2xl p-6 flex flex-col max-h-[80vh] overflow-hidden"
+            style={{ borderColor: themeColor, borderRadius: borderRadiusValue }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4 border-b-2 pb-2" style={{ borderColor: themeColor }}>
+              <h2 className="text-3xl font-bold uppercase" style={{ color: themeColor }}>{t.cart}</h2>
+              <button onClick={() => setCartOpen(false)} className="text-3xl hover:opacity-70">✕</button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto space-y-4 py-2">
+              {cart.map(item => (
+                <div key={item.product.id} className="flex justify-between items-center gap-4">
+                  <div className="flex-1 leading-tight">
+                    <div className="font-bold uppercase" style={{ color: themeColor }}>{item.product.name}</div>
+                    <div className="font-bold opacity-80">{item.product.price} ₺</div>
+                  </div>
+                  <div className="flex items-center gap-3 border-2 px-2 py-1 shrink-0" style={{ borderColor: themeColor, borderRadius: borderRadiusValue }}>
+                    <button onClick={() => updateQuantity(item.product.id, -1)} className="text-xl font-bold px-2 hover:opacity-70">-</button>
+                    <span className="font-bold text-lg w-6 text-center">{item.quantity}</span>
+                    <button onClick={() => updateQuantity(item.product.id, 1)} className="text-xl font-bold px-2 hover:opacity-70">+</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 pt-4 border-t-2" style={{ borderColor: themeColor }}>
+              <div className="flex justify-between items-center text-2xl font-bold uppercase mb-4" style={{ color: themeColor }}>
+                <span>{t.total}:</span>
+                <span>{cartTotalPrice} ₺</span>
+              </div>
+              <button 
+                onClick={() => setCartOpen(false)}
+                className="w-full py-3 text-xl font-bold border-2 transition-all active:scale-95 text-white"
+                style={{ backgroundColor: themeColor, borderColor: themeColor, borderRadius: borderRadiusValue }}
+              >
+                Kapat
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
