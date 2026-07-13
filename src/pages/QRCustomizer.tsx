@@ -59,6 +59,41 @@ export default function QRCustomizer() {
   const [transparentBg, setTransparentBg] = useState(false);
   const [downloading,   setDownloading]   = useState<string | null>(null);
 
+  // Optimizasyon için (Kasma sorununu çözmek için)
+  const [debouncedDotColor, setDebouncedDotColor] = useState('#8B5A2B');
+  const [debouncedBgColor, setDebouncedBgColor] = useState('#FFFFFF');
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedDotColor(dotColor), 100);
+    return () => clearTimeout(t);
+  }, [dotColor]);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedBgColor(bgColor), 100);
+    return () => clearTimeout(t);
+  }, [bgColor]);
+
+  // Geçmiş yönetimi (Undo)
+  type QRSettings = { dotColor: string, bgColor: string, dotStyle: DotType, cornerStyle: CornerSquareType, useLogo: boolean, transparentBg: boolean };
+  const [history, setHistory] = useState<QRSettings[]>([]);
+
+  const saveToHistory = () => {
+    setHistory(prev => [...prev, { dotColor, bgColor, dotStyle, cornerStyle, useLogo, transparentBg }]);
+  };
+
+  const handleUndo = () => {
+    if (history.length > 0) {
+      const last = history[history.length - 1];
+      setDotColor(last.dotColor);
+      setBgColor(last.bgColor);
+      setDotStyle(last.dotStyle);
+      setCornerStyle(last.cornerStyle);
+      setUseLogo(last.useLogo);
+      setTransparentBg(last.transparentBg);
+      setHistory(prev => prev.slice(0, -1));
+    }
+  };
+
   const previewRef = useRef<HTMLDivElement>(null);
   const qrInstance = useRef<QRCodeStyling | null>(null);
 
@@ -78,6 +113,7 @@ export default function QRCustomizer() {
       if (data) {
         setRestaurant(data);
         setDotColor(data.primary_color || '#8B5A2B');
+        setDebouncedDotColor(data.primary_color || '#8B5A2B');
       }
       setLoading(false);
     };
@@ -95,19 +131,19 @@ export default function QRCustomizer() {
   // --- QR güncelle (seçenekler değişince) ---
   useEffect(() => {
     if (!qrInstance.current) return;
-    qrInstance.current.update(buildOptions(280));
-  }, [dotColor, bgColor, dotStyle, cornerStyle, useLogo, transparentBg, restaurant]);
+    qrInstance.current.update(buildOptions(280, debouncedDotColor, debouncedBgColor));
+  }, [debouncedDotColor, debouncedBgColor, dotStyle, cornerStyle, useLogo, transparentBg, restaurant]);
 
-  function buildOptions(size: number) {
+  function buildOptions(size: number, overrideDotColor = debouncedDotColor, overrideBgColor = debouncedBgColor) {
     return {
       width: size,
       height: size,
       data: menuUrl,
       image: useLogo && restaurant?.logo_url ? restaurant.logo_url : undefined,
-      dotsOptions: { color: dotColor, type: dotStyle },
-      backgroundOptions: { color: transparentBg ? 'rgba(0,0,0,0)' : bgColor },
-      cornersSquareOptions: { type: cornerStyle, color: dotColor },
-      cornersDotOptions: { color: dotColor },
+      dotsOptions: { color: overrideDotColor, type: dotStyle },
+      backgroundOptions: { color: transparentBg ? 'rgba(0,0,0,0)' : overrideBgColor },
+      cornersSquareOptions: { type: cornerStyle, color: overrideDotColor },
+      cornersDotOptions: { color: overrideDotColor },
       imageOptions: {
         crossOrigin: 'anonymous' as const,
         margin: 10,
@@ -121,18 +157,19 @@ export default function QRCustomizer() {
     if (!qrInstance.current) return;
     const key = `${ext}-${size}`;
     setDownloading(key);
-    qrInstance.current.update(buildOptions(size));
+    qrInstance.current.update(buildOptions(size, dotColor, bgColor));
     await new Promise(r => setTimeout(r, 200));
     await qrInstance.current.download({
       name: `qr-${restaurant?.name || 'menu'}`,
       extension: ext,
     });
     await new Promise(r => setTimeout(r, 200));
-    qrInstance.current.update(buildOptions(280));
+    qrInstance.current.update(buildOptions(280, debouncedDotColor, debouncedBgColor));
     setDownloading(null);
   };
 
   const applyPreset = (preset: (typeof COLOR_PRESETS)[0]) => {
+    saveToHistory();
     setDotColor(preset.dot);
     setBgColor(preset.bg);
     setTransparentBg(false);
@@ -164,12 +201,21 @@ export default function QRCustomizer() {
             <h1 className="text-4xl font-bold uppercase text-brand-dark">QR Kod Özelleştirici</h1>
             <p className="text-xl text-brand-dark/60 font-bold mt-1">{restaurant.name}</p>
           </div>
-          <button
-            onClick={() => navigate('/admin')}
-            className="px-6 py-3 border-2 border-brand-dark bg-brand-light font-bold hover:bg-white shadow-pixel-sm transition-colors"
-          >
-            ← Admin Paneline Dön
-          </button>
+          <div className="flex gap-4">
+            <button
+              onClick={handleUndo}
+              disabled={history.length === 0}
+              className="px-6 py-3 border-2 border-brand-dark bg-gray-300 font-bold hover:bg-gray-400 shadow-pixel-sm transition-colors disabled:opacity-50"
+            >
+              GERİ AL ({history.length})
+            </button>
+            <button
+              onClick={() => navigate('/admin')}
+              className="px-6 py-3 border-2 border-brand-dark bg-brand-light font-bold hover:bg-white shadow-pixel-sm transition-colors"
+            >
+              ← Admin Paneline Dön
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-8">
@@ -256,12 +302,14 @@ export default function QRCustomizer() {
                   <div className="flex gap-3">
                     <input
                       type="color"
+                      onFocus={saveToHistory}
                       value={dotColor}
                       onChange={e => setDotColor(e.target.value)}
                       className="w-14 h-12 border-2 border-brand-dark cursor-pointer bg-white p-1"
                     />
                     <input
                       type="text"
+                      onFocus={saveToHistory}
                       value={dotColor}
                       onChange={e => setDotColor(e.target.value)}
                       className="flex-1 px-3 py-2 border-2 border-brand-dark bg-white focus:outline-none font-bold"
@@ -273,6 +321,7 @@ export default function QRCustomizer() {
                   <div className="flex gap-2">
                     <input
                       type="color"
+                      onFocus={saveToHistory}
                       value={bgColor}
                       onChange={e => { setBgColor(e.target.value); setTransparentBg(false); }}
                       className="w-14 h-12 border-2 border-brand-dark cursor-pointer bg-white p-1"
@@ -280,6 +329,7 @@ export default function QRCustomizer() {
                     />
                     <input
                       type="text"
+                      onFocus={saveToHistory}
                       value={transparentBg ? 'Şeffaf' : bgColor}
                       onChange={e => { setBgColor(e.target.value); setTransparentBg(false); }}
                       className="flex-1 px-3 py-2 border-2 border-brand-dark bg-white focus:outline-none font-bold"
@@ -287,7 +337,7 @@ export default function QRCustomizer() {
                     />
                   </div>
                   <button
-                    onClick={() => setTransparentBg(!transparentBg)}
+                    onClick={() => { saveToHistory(); setTransparentBg(!transparentBg); }}
                     className={`mt-2 w-full py-2 border-2 border-brand-dark text-sm font-bold transition-colors ${transparentBg ? 'bg-brand text-surface' : 'bg-white text-brand-dark hover:bg-brand-light'}`}
                   >
                     {transparentBg ? '✓ Şeffaf Arka Plan Aktif' : 'Şeffaf Yap (PNG için)'}
@@ -305,7 +355,7 @@ export default function QRCustomizer() {
                 {DOT_STYLES.map(s => (
                   <button
                     key={s.value}
-                    onClick={() => setDotStyle(s.value)}
+                    onClick={() => { saveToHistory(); setDotStyle(s.value); }}
                     className={`py-4 border-2 border-brand-dark font-bold flex flex-col items-center gap-2 transition-colors ${
                       dotStyle === s.value ? 'bg-brand text-surface shadow-pixel' : 'bg-white text-brand-dark hover:bg-brand-light'
                     }`}
@@ -331,7 +381,7 @@ export default function QRCustomizer() {
                 {CORNER_STYLES.map(s => (
                   <button
                     key={s.value}
-                    onClick={() => setCornerStyle(s.value)}
+                    onClick={() => { saveToHistory(); setCornerStyle(s.value); }}
                     className={`py-4 border-2 border-brand-dark font-bold flex flex-col items-center gap-2 transition-colors ${
                       cornerStyle === s.value ? 'bg-brand text-surface shadow-pixel' : 'bg-white text-brand-dark hover:bg-brand-light'
                     }`}
@@ -359,7 +409,7 @@ export default function QRCustomizer() {
                     <img src={restaurant.logo_url} alt="Logo" className="w-full h-full object-cover" />
                   </div>
                   <button
-                    onClick={() => setUseLogo(!useLogo)}
+                    onClick={() => { saveToHistory(); setUseLogo(!useLogo); }}
                     className={`flex-1 py-4 border-2 border-brand-dark font-bold text-lg transition-colors ${
                       useLogo ? 'bg-brand text-surface shadow-pixel' : 'bg-white text-brand-dark hover:bg-brand-light'
                     }`}

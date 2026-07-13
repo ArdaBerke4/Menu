@@ -121,6 +121,13 @@ export default function Admin() {
   const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{isOpen: boolean, message: string, onConfirm: () => void}>({ isOpen: false, message: '', onConfirm: () => {} });
 
+  type ThemeState = { themeColor: string, themeFont: string, fontSize: string, bgColor: string, bgImageUrl: string, buttonShape: string, layoutStyle: string };
+  const [settingsHistory, setSettingsHistory] = useState<ThemeState[]>([]);
+
+  const saveToHistory = () => {
+    setSettingsHistory(prev => [...prev, { themeColor, themeFont, fontSize, bgColor, bgImageUrl, buttonShape, layoutStyle }]);
+  };
+
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
@@ -238,7 +245,7 @@ export default function Admin() {
     e.stopPropagation();
     setConfirmDialog({
       isOpen: true,
-      message: `"${restaurantName}" şubesini ve içindeki tüm menü verilerini KALICI OLARAK SİLMEK istediğinize emin misiniz?`,
+      message: `"${restaurantName}" şubesini ve içindeki tüm menü verilerini silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`,
       onConfirm: async () => {
         setConfirmDialog(prev => ({ ...prev, isOpen: false }));
         setLoading(true);
@@ -290,6 +297,32 @@ export default function Admin() {
       showToast("Görünüm ayarları başarıyla kaydedildi!");
     }
     setLoading(false);
+  };
+
+  const handleUndoSettings = () => {
+    if (settingsHistory.length > 0) {
+      const last = settingsHistory[settingsHistory.length - 1];
+      setThemeColor(last.themeColor);
+      setThemeFont(last.themeFont);
+      setFontSize(last.fontSize);
+      setBgColor(last.bgColor);
+      setBgImageUrl(last.bgImageUrl);
+      setButtonShape(last.buttonShape);
+      setLayoutStyle(last.layoutStyle);
+      setSettingsHistory(prev => prev.slice(0, -1));
+      showToast("Bir adım geri alındı.");
+    } else if (selectedRestaurant) {
+      setThemeColor(selectedRestaurant.primary_color || '#8B5A2B');
+      setThemeFont(selectedRestaurant.font_family || '"VT323", monospace');
+      setFontSize(selectedRestaurant.font_size || 'medium');
+      setBgColor(selectedRestaurant.background_color || DEFAULT_BG_COLOR);
+      setBgImageUrl(selectedRestaurant.background_image_url || '');
+      setButtonShape(selectedRestaurant.button_shape || 'square');
+      setLayoutStyle(selectedRestaurant.layout_style || 'list');
+      setLogoFile(null);
+      setBgUploadFile(null);
+      showToast("Tüm değişiklikler sıfırlandı.");
+    }
   };
 
   const handleUpdateAbout = async (e: React.FormEvent) => {
@@ -446,7 +479,7 @@ export default function Admin() {
   const handleDeleteCategory = async (categoryId: string) => {
     setConfirmDialog({
       isOpen: true,
-      message: "Kategoriyi ve içindeki tüm ürünleri silmek istediğine emin misin?",
+      message: "Kategoriyi ve içindeki tüm ürünleri silmek istediğine emin misin? Bu işlem geri alınamaz.",
       onConfirm: async () => {
         setConfirmDialog(prev => ({ ...prev, isOpen: false }));
         const { error } = await supabase.from('categories').delete().eq('id', categoryId);
@@ -464,7 +497,7 @@ export default function Admin() {
   const handleDeleteProduct = async (productId: string) => {
     setConfirmDialog({
       isOpen: true,
-      message: "Bu ürünü kalıcı olarak silmek istediğine emin misin?",
+      message: "Bu ürünü silmek istediğine emin misin? Bu işlem geri alınamaz.",
       onConfirm: async () => {
         setConfirmDialog(prev => ({ ...prev, isOpen: false }));
         const { error } = await supabase.from('products').delete().eq('id', productId);
@@ -509,7 +542,7 @@ export default function Admin() {
   const deleteCampaign = async (campaignId: string) => {
     setConfirmDialog({
       isOpen: true,
-      message: "Bu kampanyayı silmek istediğine emin misin?",
+      message: "Bu kampanyayı silmek istediğine emin misin? Ürünlerin fiyatları eski haline dönecektir.",
       onConfirm: async () => {
         setConfirmDialog(prev => ({ ...prev, isOpen: false }));
         const { error } = await supabase.from('campaigns').delete().eq('id', campaignId);
@@ -523,8 +556,8 @@ export default function Admin() {
     });
   };
 
-  const sortedCategories = [...categories].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
-  const filteredProducts = products
+  const sortedCategories = useMemo(() => [...categories].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)), [categories]);
+  const filteredProducts = useMemo(() => products
     .filter(p => {
       const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || (p.description && p.description.toLowerCase().includes(searchTerm.toLowerCase()));
       const matchesCategory = filterCategoryId === '' ? true : p.category_id === filterCategoryId;
@@ -539,7 +572,7 @@ export default function Admin() {
         return catA - catB;
       }
       return (a.sort_order ?? 0) - (b.sort_order ?? 0);
-    });
+    }), [products, searchTerm, filterCategoryId, sortByPrice, categories]);
 
   // Kategoriye göre ürünleri grupla (performans için)
   const productsByCategoryId = useMemo(() => {
@@ -611,7 +644,7 @@ export default function Admin() {
     if (selectedProductIds.length === 0) return;
     setConfirmDialog({
       isOpen: true,
-      message: `Seçili ${selectedProductIds.length} ürünü KALICI OLARAK SİLMEK istediğinize emin misiniz?`,
+      message: `Seçili ${selectedProductIds.length} ürünü silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`,
       onConfirm: async () => {
         setConfirmDialog(prev => ({ ...prev, isOpen: false }));
         setLoading(true);
@@ -668,27 +701,35 @@ export default function Admin() {
                 <button type="submit" className="w-full bg-[#8fb38a] text-brand-dark border-2 border-brand-dark px-4 py-3 font-bold hover:bg-[#a3c79e] shadow-pixel">+ OLUŞTUR</button>
               </form>
             </div>
+          </div>
         </div>
       </div>
 
       {/* CONFIRM DIALOG */}
       {confirmDialog.isOpen && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
-          <div className="bg-[#F4E4C1] border-4 border-brand-dark shadow-pixel p-8 max-w-md w-full text-center">
-            <div className="text-5xl mb-4">⚠️</div>
-            <h3 className="text-2xl font-bold uppercase mb-6">{confirmDialog.message}</h3>
-            <div className="flex gap-4 justify-center">
+        <div className="fixed inset-0 bg-brand-dark/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
+          <div className="bg-surface border-4 border-brand-dark shadow-pixel p-8 max-w-lg w-full text-center animate-scale-in flex flex-col items-center">
+            <div className="w-20 h-20 bg-[#fde8e8] border-4 border-[#d97777] rounded-full flex items-center justify-center mb-6 shadow-pixel-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-[#d97777]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                <path strokeLinecap="square" strokeLinejoin="miter" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </div>
+            <h3 className="text-2xl font-bold mb-4 text-brand-dark leading-snug">{confirmDialog.message.split('?')[0]}?</h3>
+            {confirmDialog.message.split('?')[1] && (
+              <p className="text-brand-dark/70 font-bold mb-8 text-lg">{confirmDialog.message.split('?')[1]}</p>
+            )}
+            <div className="flex gap-4 justify-center w-full">
               <button 
                 onClick={() => setConfirmDialog({ ...confirmDialog, isOpen: false })} 
-                className="px-6 py-3 bg-gray-300 border-2 border-brand-dark font-bold hover:bg-gray-400 transition-colors"
+                className="flex-1 px-6 py-4 bg-white text-brand-dark border-4 border-brand-dark font-bold hover:bg-gray-50 transition-colors shadow-pixel-sm text-lg"
               >
-                İPTAL
+                Vazgeç
               </button>
               <button 
                 onClick={confirmDialog.onConfirm} 
-                className="px-6 py-3 bg-[#d97777] text-white border-2 border-brand-dark font-bold hover:bg-[#c25a5a] shadow-pixel-sm transition-transform hover:scale-105"
+                className="flex-1 px-6 py-4 bg-[#d97777] text-white border-4 border-brand-dark font-bold hover:bg-[#c25a5a] shadow-pixel-sm transition-transform hover:-translate-y-1 text-lg"
               >
-                SİL
+                Evet, Sil
               </button>
             </div>
           </div>
@@ -876,14 +917,14 @@ export default function Admin() {
                   <div>
                     <label className="block font-bold mb-2">Marka Vurgu Rengi</label>
                     <div className="flex gap-4">
-                      <input type="color" value={themeColor} onChange={(e) => setThemeColor(e.target.value)} className="w-16 h-12 border-2 border-brand-dark cursor-pointer bg-white p-1" />
-                      <input type="text" value={themeColor} onChange={(e) => setThemeColor(e.target.value)} className="flex-1 px-4 py-2 border-2 border-brand-dark bg-white focus:outline-none" />
+                      <input type="color" onFocus={saveToHistory} value={themeColor} onChange={(e) => setThemeColor(e.target.value)} className="w-16 h-12 border-2 border-brand-dark cursor-pointer bg-white p-1" />
+                      <input type="text" onFocus={saveToHistory} value={themeColor} onChange={(e) => setThemeColor(e.target.value)} className="flex-1 px-4 py-2 border-2 border-brand-dark bg-white focus:outline-none" />
                     </div>
                   </div>
 
                   <div>
                     <label className="block font-bold mb-2">Menü Yazı Tipi (Font)</label>
-                    <select value={themeFont} onChange={(e) => setThemeFont(e.target.value)} className="w-full px-4 py-3 border-2 border-brand-dark bg-white focus:outline-none" style={{ fontFamily: themeFont, fontSize: themeFont.includes('VT323') ? '1.25rem' : '1rem' }}>
+                    <select value={themeFont} onFocus={saveToHistory} onChange={(e) => setThemeFont(e.target.value)} className="w-full px-4 py-3 border-2 border-brand-dark bg-white focus:outline-none" style={{ fontFamily: themeFont, fontSize: themeFont.includes('VT323') ? '1.25rem' : '1rem' }}>
                       <option value='"VT323", monospace' style={{ fontFamily: '"VT323", monospace', fontSize: '1.25rem' }}>VT323 (Klasik Oyun / Cozy)</option>
                       <option value='"Courier New", Courier, monospace' style={{ fontFamily: '"Courier New", Courier, monospace' }}>Courier New (Daktilo / Retro)</option>
                       <option value='Arial, sans-serif' style={{ fontFamily: 'Arial, sans-serif' }}>Arial (Sade / Modern)</option>
@@ -951,7 +992,7 @@ export default function Admin() {
 
                   <div>
                     <label className="block font-bold mb-2">Buton Şekilleri</label>
-                    <select value={buttonShape} onChange={(e) => setButtonShape(e.target.value)} className="w-full px-4 py-3 border-2 border-brand-dark bg-white focus:outline-none text-base">
+                    <select value={buttonShape} onFocus={saveToHistory} onChange={(e) => setButtonShape(e.target.value)} className="w-full px-4 py-3 border-2 border-brand-dark bg-white focus:outline-none text-base">
                       <option value='square'>Keskin Kare</option>
                       <option value='rounded'>Hafif Yuvarlak</option>
                       <option value='pill'>Tam Yuvarlak (Hap)</option>
@@ -962,14 +1003,14 @@ export default function Admin() {
                     <label className="block font-bold mb-2 text-brand">Menü Düzeni (Layout)</label>
                     <div className="flex flex-col gap-3">
                       <label className={`border-2 border-brand-dark p-3 cursor-pointer flex gap-3 transition-colors ${layoutStyle === 'list' ? 'bg-[#8fb38a] text-brand-dark' : 'bg-white'}`}>
-                        <input type="radio" name="layout" value="list" checked={layoutStyle === 'list'} onChange={() => setLayoutStyle('list')} className="w-5 h-5 accent-brand-dark" />
+                        <input type="radio" name="layout" value="list" checked={layoutStyle === 'list'} onChange={() => { saveToHistory(); setLayoutStyle('list'); }} className="w-5 h-5 accent-brand-dark" />
                         <div>
                           <div className="font-bold">Dikey Liste</div>
                           <div className="text-sm opacity-80">Standart alt alta dizilim.</div>
                         </div>
                       </label>
                       <label className={`border-2 border-brand-dark p-3 cursor-pointer flex gap-3 transition-colors ${layoutStyle === 'grid' ? 'bg-[#8fb38a] text-brand-dark' : 'bg-white'}`}>
-                        <input type="radio" name="layout" value="grid" checked={layoutStyle === 'grid'} onChange={() => setLayoutStyle('grid')} className="w-5 h-5 accent-brand-dark" />
+                        <input type="radio" name="layout" value="grid" checked={layoutStyle === 'grid'} onChange={() => { saveToHistory(); setLayoutStyle('grid'); }} className="w-5 h-5 accent-brand-dark" />
                         <div>
                           <div className="font-bold">Izgara (Grid)</div>
                           <div className="text-sm opacity-80">Yan yana dizilmiş kartlar.</div>
@@ -992,8 +1033,8 @@ export default function Admin() {
                   <div>
                     <label className="block font-bold mb-2">Arka Plan Rengi</label>
                     <div className="flex gap-4">
-                      <input type="color" value={bgColor} onChange={(e) => setBgColor(e.target.value)} className="w-16 h-12 border-2 border-brand-dark cursor-pointer bg-white p-1" />
-                      <input type="text" value={bgColor} onChange={(e) => setBgColor(e.target.value)} className="flex-1 px-4 py-2 border-2 border-brand-dark bg-white focus:outline-none" />
+                      <input type="color" onFocus={saveToHistory} value={bgColor} onChange={(e) => setBgColor(e.target.value)} className="w-16 h-12 border-2 border-brand-dark cursor-pointer bg-white p-1" />
+                      <input type="text" onFocus={saveToHistory} value={bgColor} onChange={(e) => setBgColor(e.target.value)} className="flex-1 px-4 py-2 border-2 border-brand-dark bg-white focus:outline-none" />
                     </div>
                   </div>
 
@@ -1003,7 +1044,7 @@ export default function Admin() {
 
                     <button
                       type="button"
-                      onClick={() => { setBgColor(DEFAULT_BG_COLOR); setBgImageUrl(''); setBgUploadFile(null); }}
+                      onClick={() => { saveToHistory(); setBgColor(DEFAULT_BG_COLOR); setBgImageUrl(''); setBgUploadFile(null); }}
                       className={`w-full h-14 border-4 flex items-center justify-center gap-3 font-bold text-brand-dark mb-3 transition-all ${isStandard ? 'border-[#8fb38a] ring-4 ring-[#8fb38a] scale-[1.02]' : 'border-brand-dark hover:scale-[1.02]'}`}
                       style={{ backgroundColor: DEFAULT_BG_COLOR }}
                     >
@@ -1018,7 +1059,7 @@ export default function Admin() {
                         <button
                           key={preset.id}
                           type="button"
-                          onClick={() => { setBgImageUrl(preset.css); setBgUploadFile(null); }}
+                          onClick={() => { saveToHistory(); setBgImageUrl(preset.css); setBgUploadFile(null); }}
                           className={`h-16 border-2 border-brand-dark flex items-center justify-center transition-transform ${bgImageUrl === preset.css && !bgUploadFile && !isStandard ? 'ring-4 ring-[#8fb38a] scale-105' : 'hover:scale-105'}`}
                           style={{ backgroundColor: bgColor, backgroundImage: preset.css || 'none' }}
                         >
@@ -1036,9 +1077,14 @@ export default function Admin() {
                 </div>
               </div>
 
-              <button type="submit" disabled={loading} className="w-full bg-[#8fb38a] text-brand-dark border-2 border-brand-dark px-6 py-4 shadow-pixel font-bold text-2xl hover:bg-[#a3c79e]">
-                {loading ? 'KAYDEDİLİYOR...' : 'TÜM AYARLARI KAYDET'}
-              </button>
+              <div className="flex gap-4">
+                <button type="button" onClick={handleUndoSettings} className="w-1/3 bg-gray-300 text-brand-dark border-2 border-brand-dark px-6 py-4 font-bold text-xl hover:bg-gray-400 transition-colors">
+                  GERİ AL
+                </button>
+                <button type="submit" disabled={loading} className="w-2/3 bg-[#8fb38a] text-brand-dark border-2 border-brand-dark px-6 py-4 shadow-pixel font-bold text-2xl hover:bg-[#a3c79e] transition-colors">
+                  {loading ? 'KAYDEDİLİYOR...' : 'TÜM AYARLARI KAYDET'}
+                </button>
+              </div>
             </form>
           </div>
         )}
@@ -1242,22 +1288,29 @@ export default function Admin() {
 
       {/* CONFIRM DIALOG */}
       {confirmDialog.isOpen && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
-          <div className="bg-[#F4E4C1] border-4 border-brand-dark shadow-pixel p-8 max-w-md w-full text-center">
-            <div className="text-5xl mb-4">⚠️</div>
-            <h3 className="text-2xl font-bold uppercase mb-6">{confirmDialog.message}</h3>
-            <div className="flex gap-4 justify-center">
+        <div className="fixed inset-0 bg-brand-dark/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
+          <div className="bg-surface border-4 border-brand-dark shadow-pixel p-8 max-w-lg w-full text-center animate-scale-in flex flex-col items-center">
+            <div className="w-20 h-20 bg-[#fde8e8] border-4 border-[#d97777] rounded-full flex items-center justify-center mb-6 shadow-pixel-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-[#d97777]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                <path strokeLinecap="square" strokeLinejoin="miter" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </div>
+            <h3 className="text-2xl font-bold mb-4 text-brand-dark leading-snug">{confirmDialog.message.split('?')[0]}?</h3>
+            {confirmDialog.message.split('?')[1] && (
+              <p className="text-brand-dark/70 font-bold mb-8 text-lg">{confirmDialog.message.split('?')[1]}</p>
+            )}
+            <div className="flex gap-4 justify-center w-full">
               <button 
                 onClick={() => setConfirmDialog({ ...confirmDialog, isOpen: false })} 
-                className="px-6 py-3 bg-gray-300 border-2 border-brand-dark font-bold hover:bg-gray-400 transition-colors"
+                className="flex-1 px-6 py-4 bg-white text-brand-dark border-4 border-brand-dark font-bold hover:bg-gray-50 transition-colors shadow-pixel-sm text-lg"
               >
-                İPTAL
+                Vazgeç
               </button>
               <button 
                 onClick={confirmDialog.onConfirm} 
-                className="px-6 py-3 bg-[#d97777] text-white border-2 border-brand-dark font-bold hover:bg-[#c25a5a] shadow-pixel-sm transition-transform hover:scale-105"
+                className="flex-1 px-6 py-4 bg-[#d97777] text-white border-4 border-brand-dark font-bold hover:bg-[#c25a5a] shadow-pixel-sm transition-transform hover:-translate-y-1 text-lg"
               >
-                SİL
+                Evet, Sil
               </button>
             </div>
           </div>
