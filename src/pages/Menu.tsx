@@ -17,6 +17,9 @@ interface Restaurant {
   description?: string;
   address?: string;
   layout_style?: 'list' | 'grid' | 'canvas';
+  header_style?: 'center' | 'left' | 'banner';
+  nav_style?: 'scroll' | 'tabs';
+  card_bg_color?: string;
 }
 
 interface Category { id: string; name: string; restaurant_id: string; pos_x?: number; pos_y?: number; }
@@ -150,6 +153,35 @@ export default function Menu() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortByPrice, setSortByPrice] = useState<null | 'asc' | 'desc'>(null);
+  const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
+
+  // DRAG TO SCROLL FOR TABS
+  const tabsRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!tabsRef.current) return;
+    setIsDragging(true);
+    setStartX(e.pageX - tabsRef.current.offsetLeft);
+    setScrollLeft(tabsRef.current.scrollLeft);
+  };
+  const handleMouseLeave = () => setIsDragging(false);
+  const handleMouseUp = () => setIsDragging(false);
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !tabsRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - tabsRef.current.offsetLeft;
+    const walk = (x - startX); // Reduced speed multiplier from 2 to 1
+    tabsRef.current.scrollLeft = scrollLeft - walk;
+  };
+
+  useEffect(() => {
+    if (categories.length > 0 && !activeCategoryId) {
+      setActiveCategoryId(categories[0].id);
+    }
+  }, [categories, activeCategoryId]);
 
   // OPTIMIZATION: Memoize products by category and sort them so we don't do it on every render
   const categoryProductsMap = React.useMemo(() => {
@@ -172,6 +204,26 @@ export default function Menu() {
 
   // KAMPANYA
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+
+  // Kampanyalı fiyat hesapla
+  const getDiscountedPrice = (product: Product): { original: number; discounted: number | null; percent: number } => {
+    // En yüksek indirimi uygula (birden fazla kampanya varsa)
+    let maxDiscount = 0;
+    for (const camp of campaigns) {
+      if (!camp.is_active) continue;
+      if (camp.category_id === null || camp.category_id === product.category_id) {
+        if (camp.discount_percent > maxDiscount) maxDiscount = camp.discount_percent;
+      }
+    }
+    if (maxDiscount > 0) {
+      return {
+        original: product.price,
+        discounted: parseFloat((product.price * (1 - maxDiscount / 100)).toFixed(2)),
+        percent: maxDiscount
+      };
+    }
+    return { original: product.price, discounted: null, percent: 0 };
+  };
 
   // SEPET STATE'İ
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -208,6 +260,82 @@ export default function Menu() {
   const [lang, setLang] = useState<LangCode>(detectLang);
   const [langOpen, setLangOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
+
+  // ÇEVİRİ STATE'İ
+  const [translations, setTranslations] = useState<Record<string, string>>({});
+  const [isTranslating, setIsTranslating] = useState(false);
+
+  // Dil değiştiğinde çevirileri getir
+  useEffect(() => {
+    if (lang === 'tr') {
+      setTranslations({});
+      return;
+    }
+
+    const cacheKey = `trans_${restaurant?.id}_${lang}`;
+    const cached = sessionStorage.getItem(cacheKey);
+    if (cached) {
+      setTranslations(JSON.parse(cached));
+      return;
+    }
+
+    const translateBatch = async () => {
+      setIsTranslating(true);
+      const textsToTranslate = new Set<string>();
+      categories.forEach(c => { if (c.name) textsToTranslate.add(c.name); });
+      products.forEach(p => {
+        if (p.name) textsToTranslate.add(p.name);
+        if (p.description) textsToTranslate.add(p.description);
+      });
+
+      const textArray = Array.from(textsToTranslate);
+      if (textArray.length === 0) {
+        setIsTranslating(false);
+        return;
+      }
+
+      const newTranslations: Record<string, string> = {};
+      let batch: string[] = [];
+      let batchLength = 0;
+      
+      const translateAndStore = async (texts: string[]) => {
+        try {
+          const combined = texts.join('\n');
+          const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=tr&tl=${lang}&dt=t&q=${encodeURIComponent(combined)}`;
+          const response = await fetch(url);
+          const data = await response.json();
+          let translatedCombined = data[0].map((item: any) => item[0]).join('');
+          const translatedArray = translatedCombined.split('\n');
+          
+          texts.forEach((original, idx) => {
+            newTranslations[original] = translatedArray[idx]?.trim() || original;
+          });
+        } catch (error) {
+          console.error("Translation error", error);
+        }
+      };
+
+      for (const text of textArray) {
+        if (batchLength + text.length > 1000) {
+          await translateAndStore(batch);
+          batch = [text];
+          batchLength = text.length;
+        } else {
+          batch.push(text);
+          batchLength += text.length + 1;
+        }
+      }
+      if (batch.length > 0) {
+        await translateAndStore(batch);
+      }
+
+      setTranslations(newTranslations);
+      sessionStorage.setItem(cacheKey, JSON.stringify(newTranslations));
+      setIsTranslating(false);
+    };
+
+    translateBatch();
+  }, [lang, categories, products, restaurant?.id]);
 
   // Dil değiştirme
   const changeLang = (code: LangCode) => {
@@ -249,26 +377,6 @@ export default function Menu() {
     fetchMenu();
   }, [id]);
 
-  // Kampanyalı fiyat hesapla
-  const getDiscountedPrice = (product: Product): { original: number; discounted: number | null; percent: number } => {
-    // En yüksek indirimi uygula (birden fazla kampanya varsa)
-    let maxDiscount = 0;
-    for (const camp of campaigns) {
-      if (!camp.is_active) continue;
-      if (camp.category_id === null || camp.category_id === product.category_id) {
-        if (camp.discount_percent > maxDiscount) maxDiscount = camp.discount_percent;
-      }
-    }
-    if (maxDiscount > 0) {
-      return {
-        original: product.price,
-        discounted: parseFloat((product.price * (1 - maxDiscount / 100)).toFixed(2)),
-        percent: maxDiscount
-      };
-    }
-    return { original: product.price, discounted: null, percent: 0 };
-  };
-
   const t = T[lang];
   const isRTL = LANGUAGES[lang].rtl ?? false;
 
@@ -287,7 +395,7 @@ export default function Menu() {
   const isCustomPhoto = bgValue.startsWith('http') || bgValue.startsWith('data:');
 
   const menuStyle = {
-    fontFamily: restaurant.font_family || '"VT323", monospace',
+    fontFamily: (restaurant.font_family || '"VT323", monospace').includes('VT323') ? '"VT323", "Press Start 2P", monospace' : restaurant.font_family,
     '--theme-color': restaurant.primary_color || '#8B5A2B',
     backgroundColor: restaurant.background_color || '#F4E4C1',
     backgroundImage: bgValue ? (isCustomPhoto ? `url(${bgValue})` : bgValue) : 'none',
@@ -306,6 +414,7 @@ export default function Menu() {
     restaurant.button_shape === 'pill' ? 'rounded-full' : 'rounded-none';
 
   const themeColor = restaurant.primary_color || '#8B5A2B';
+  const cardBgColor = restaurant.card_bg_color || '#FFFFFF';
   const fs = getFontSizeClasses(restaurant.font_size);
 
   const mapsUrl = restaurant.address
@@ -317,48 +426,66 @@ export default function Menu() {
 
       {/* HEADER */}
       <header
-        className="w-full max-w-md text-center mt-8 mb-6 bg-white/80 p-6 shadow-sm border-2 backdrop-blur-sm"
+        className={`w-full max-w-md mt-8 mb-6 bg-white/80 shadow-sm border-2 backdrop-blur-sm ${
+          restaurant.header_style === 'left' ? 'p-6 flex flex-row items-center text-left gap-6' : 
+          restaurant.header_style === 'banner' ? 'relative p-0 overflow-hidden' : 
+          'p-6 text-center'
+        }`}
         style={{ borderColor: themeColor, borderRadius: borderRadiusValue }}
       >
-        <div
-          className={`w-24 h-24 bg-[#F4E4C1] border-4 mx-auto mb-4 flex items-center justify-center text-5xl font-bold uppercase overflow-hidden ${radiusClass === 'rounded-full' ? 'rounded-full' : 'rounded-none'}`}
-          style={{ borderColor: themeColor, color: themeColor }}
-        >
-          {restaurant.logo_url
-            ? <img src={restaurant.logo_url} alt="Logo" loading="lazy" className="w-full h-full object-cover" />
-            : restaurant.name.charAt(0)
-          }
-        </div>
-
-        <h1 className="text-4xl font-bold uppercase pb-2" style={{ color: themeColor }}>
-          {restaurant.name}
-        </h1>
-        <p className="mt-1 text-lg uppercase tracking-widest font-bold" style={{ color: themeColor }}>
-          {t.subtitle}
-        </p>
-
-        {restaurant.description && (
-          <div className="mt-4 pt-4 border-t-2" style={{ borderColor: `${themeColor}40` }}>
-            <p className="text-lg leading-relaxed italic opacity-90" style={{ color: themeColor }}>
-              {restaurant.description}
-            </p>
-          </div>
-        )}
-
-        {restaurant.address && mapsUrl && (
-          <div className="mt-4 pt-4 border-t-2" style={{ borderColor: `${themeColor}40` }}>
-            <a
-              href={mapsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-4 py-2 border-2 font-bold text-lg transition-all hover:opacity-80 active:scale-95"
-              style={{ borderColor: themeColor, color: themeColor, backgroundColor: `${themeColor}15`, borderRadius: borderRadiusValue }}
+        {restaurant.header_style === 'banner' ? (
+          <>
+            <div className="w-full h-32 bg-brand-light border-b-2" style={{ borderColor: themeColor, backgroundImage: `url(${restaurant.background_image_url || ''})`, backgroundSize: 'cover', backgroundPosition: 'center' }}></div>
+            <div className="px-6 pb-6 pt-12 relative text-center">
+              <div
+                className={`w-24 h-24 bg-[#F4E4C1] border-4 absolute -top-12 left-1/2 -translate-x-1/2 flex items-center justify-center text-5xl font-bold uppercase overflow-hidden shadow-sm ${radiusClass === 'rounded-full' ? 'rounded-full' : 'rounded-none'}`}
+                style={{ borderColor: themeColor, color: themeColor }}
+              >
+                {restaurant.logo_url ? <img src={restaurant.logo_url} alt="Logo" loading="lazy" className="w-full h-full object-cover" /> : restaurant.name.charAt(0)}
+              </div>
+              <h1 className="text-4xl font-bold uppercase pb-1" style={{ color: themeColor }}>{restaurant.name}</h1>
+              <p className="mt-1 text-lg uppercase tracking-widest font-bold opacity-80" style={{ color: themeColor }}>{t.subtitle}</p>
+              {restaurant.description && (
+                <div className="mt-4 pt-4 border-t-2" style={{ borderColor: `${themeColor}40` }}>
+                  <p className="text-lg leading-relaxed italic opacity-90" style={{ color: themeColor }}>{translations[restaurant.description] || restaurant.description}</p>
+                </div>
+              )}
+            </div>
+          </>
+        ) : restaurant.header_style === 'left' ? (
+          <>
+            <div
+              className={`w-24 h-24 shrink-0 bg-[#F4E4C1] border-4 flex items-center justify-center text-5xl font-bold uppercase overflow-hidden ${radiusClass === 'rounded-full' ? 'rounded-full' : 'rounded-none'}`}
+              style={{ borderColor: themeColor, color: themeColor }}
             >
-              <span>📍</span>
-              <span className="leading-tight">{restaurant.address}</span>
-              <span className="text-sm opacity-70 shrink-0">{t.mapsLink}</span>
-            </a>
-          </div>
+              {restaurant.logo_url ? <img src={restaurant.logo_url} alt="Logo" loading="lazy" className="w-full h-full object-cover" /> : restaurant.name.charAt(0)}
+            </div>
+            <div className="flex-1">
+              <h1 className="text-3xl font-bold uppercase leading-tight" style={{ color: themeColor }}>{restaurant.name}</h1>
+              <p className="mt-1 text-sm uppercase tracking-widest font-bold opacity-80" style={{ color: themeColor }}>{t.subtitle}</p>
+              {restaurant.description && (
+                <p className="mt-3 text-sm leading-relaxed italic opacity-90 border-l-2 pl-3" style={{ color: themeColor, borderColor: `${themeColor}40` }}>
+                  {translations[restaurant.description] || restaurant.description}
+                </p>
+              )}
+            </div>
+          </>
+        ) : (
+          <>
+            <div
+              className={`w-24 h-24 bg-[#F4E4C1] border-4 mx-auto mb-4 flex items-center justify-center text-5xl font-bold uppercase overflow-hidden ${radiusClass === 'rounded-full' ? 'rounded-full' : 'rounded-none'}`}
+              style={{ borderColor: themeColor, color: themeColor }}
+            >
+              {restaurant.logo_url ? <img src={restaurant.logo_url} alt="Logo" loading="lazy" className="w-full h-full object-cover" /> : restaurant.name.charAt(0)}
+            </div>
+            <h1 className="text-4xl font-bold uppercase pb-2" style={{ color: themeColor }}>{restaurant.name}</h1>
+            <p className="mt-1 text-lg uppercase tracking-widest font-bold opacity-80" style={{ color: themeColor }}>{t.subtitle}</p>
+            {restaurant.description && (
+              <div className="mt-4 pt-4 border-t-2" style={{ borderColor: `${themeColor}40` }}>
+                <p className="text-lg leading-relaxed italic opacity-90" style={{ color: themeColor }}>{translations[restaurant.description] || restaurant.description}</p>
+              </div>
+            )}
+          </>
         )}
       </header>
 
@@ -416,13 +543,13 @@ export default function Menu() {
                     return (
                       <div key={category.id} className="absolute space-y-3" style={{ left: category.pos_x || 0, top: category.pos_y || 0, width: '300px' }}>
                         <div className={`text-surface px-4 py-2 border-2 inline-block font-bold uppercase shadow-sm ${radiusClass} ${fs.cat}`} style={{ backgroundColor: themeColor, borderColor: themeColor }}>
-                          {category.name}
+                          {translations[category.name] || category.name}
                         </div>
                         <div className="space-y-2">
                           {categoryProducts.map(product => {
                             const priceInfo = getDiscountedPrice(product);
                             return (
-                            <div key={product.id} className={`bg-white/95 border-2 p-3 shadow-sm flex flex-col gap-2 ${radiusClass}`} style={{ borderColor: themeColor }}>
+                            <div key={product.id} className={`border-2 p-3 shadow-sm flex flex-col gap-2 ${radiusClass}`} style={{ borderColor: themeColor, backgroundColor: cardBgColor }}>
                               <div className="flex gap-3 h-full">
                                 {product.image_url && (
                                   <div className={`w-14 h-14 border bg-white shrink-0 overflow-hidden ${radiusClass === 'rounded-full' ? 'rounded-full' : 'rounded-none'}`} style={{ borderColor: themeColor }}>
@@ -430,8 +557,8 @@ export default function Menu() {
                                   </div>
                                 )}
                                 <div className="flex-1 leading-tight flex flex-col justify-center">
-                                  <h3 className={`font-bold uppercase ${fs.product}`} style={{ color: themeColor }}>{product.name}</h3>
-                                  {product.description && <p className={`text-ink/80 leading-snug mt-1 ${fs.desc}`}>{product.description}</p>}
+                                  <h3 className={`font-bold uppercase ${fs.product}`} style={{ color: themeColor }}>{translations[product.name] || product.name}</h3>
+                                  {product.description && <p className={`text-ink/80 leading-snug mt-1 ${fs.desc}`}>{translations[product.description] || product.description}</p>}
                                 </div>
                                 <div className="flex flex-col justify-between items-end shrink-0 gap-1">
                                   {priceInfo.discounted !== null ? (
@@ -465,7 +592,33 @@ export default function Menu() {
           </div>
         ) : (
           <div className={restaurant.layout_style === 'grid' ? "grid grid-cols-1 md:grid-cols-2 gap-8" : "space-y-10"}>
-            {categories.map(category => {
+            {restaurant.nav_style === 'tabs' && (
+              <div 
+                ref={tabsRef}
+                onMouseDown={handleMouseDown}
+                onMouseLeave={handleMouseLeave}
+                onMouseUp={handleMouseUp}
+                onMouseMove={handleMouseMove}
+                className={`flex overflow-x-auto gap-3 pb-4 mb-2 sticky top-[80px] z-10 pt-2 cursor-grab active:cursor-grabbing ${isDragging ? '' : 'snap-x'}`} 
+                style={{ scrollbarWidth: 'none' }}
+              >
+                {categories.filter(c => (categoryProductsMap[c.id] || []).length > 0).map(category => (
+                  <button
+                    key={`tab-${category.id}`}
+                    onClick={() => setActiveCategoryId(category.id)}
+                    className={`shrink-0 px-5 py-2 font-bold uppercase transition-all snap-start ${radiusClass} border-2 shadow-sm text-sm`}
+                    style={{
+                      borderColor: themeColor,
+                      backgroundColor: activeCategoryId === category.id ? themeColor : 'white',
+                      color: activeCategoryId === category.id ? 'white' : themeColor,
+                    }}
+                  >
+                    {translations[category.name] || category.name}
+                  </button>
+                ))}
+              </div>
+            )}
+            {categories.filter(c => restaurant.nav_style === 'tabs' ? c.id === activeCategoryId : true).map(category => {
               const categoryProducts = categoryProductsMap[category.id] || [];
 
               if (categoryProducts.length === 0) return null;
@@ -476,7 +629,7 @@ export default function Menu() {
                     className={`text-surface px-6 py-2 border-2 inline-block font-bold uppercase shadow-sm ${radiusClass} ${fs.cat}`}
                     style={{ backgroundColor: themeColor, borderColor: themeColor }}
                   >
-                    {category.name}
+                    {translations[category.name] || category.name}
                   </div>
 
                   <div className={restaurant.layout_style === 'grid' ? "grid grid-cols-1 gap-4" : "space-y-4"}>
@@ -485,8 +638,8 @@ export default function Menu() {
                       return (
                       <div
                         key={product.id}
-                        className={`bg-white/95 border-4 p-4 shadow-sm flex gap-4 backdrop-blur-sm ${radiusClass}`}
-                        style={{ borderColor: themeColor }}
+                        className={`border-4 p-4 shadow-sm flex gap-4 backdrop-blur-sm ${radiusClass}`}
+                        style={{ borderColor: themeColor, backgroundColor: cardBgColor }}
                       >
                         {product.image_url && (
                           <div
@@ -498,10 +651,10 @@ export default function Menu() {
                         )}
                         <div className="flex-1 flex flex-col justify-center">
                           <h3 className={`font-bold uppercase leading-none mb-2 ${fs.product}`} style={{ color: themeColor }}>
-                            {product.name}
+                            {translations[product.name] || product.name}
                           </h3>
                           {product.description && (
-                            <p className={`text-ink/80 leading-snug ${fs.desc}`}>{product.description}</p>
+                            <p className={`text-ink/80 leading-snug ${fs.desc}`}>{translations[product.description] || product.description}</p>
                           )}
                         </div>
                         <div className="flex flex-col justify-between items-end shrink-0 gap-2">
@@ -543,8 +696,23 @@ export default function Menu() {
         )}
       </main>
 
-      <footer className="mt-auto pt-16 pb-20 text-lg font-bold opacity-80 uppercase" style={{ color: themeColor }}>
-        <p>{t.developer}</p>
+      <footer className="w-full max-w-md mx-auto mt-auto pt-8 pb-20 flex flex-col items-center gap-8 text-center">
+        {restaurant.address && mapsUrl && (
+          <div className="w-full bg-white/80 p-5 shadow-sm border-2 backdrop-blur-sm" style={{ borderColor: themeColor, borderRadius: borderRadiusValue }}>
+            <a
+              href={mapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex flex-col items-center justify-center gap-2 px-4 py-3 border-2 font-bold text-lg transition-all hover:opacity-80 active:scale-95 w-full"
+              style={{ borderColor: themeColor, color: themeColor, backgroundColor: `${themeColor}15`, borderRadius: borderRadiusValue }}
+            >
+              <span className="text-3xl">📍</span>
+              <span className="leading-tight">{translations[restaurant.address] || restaurant.address}</span>
+              <span className="text-sm opacity-70 shrink-0 border-b" style={{ borderColor: themeColor }}>{t.mapsLink}</span>
+            </a>
+          </div>
+        )}
+        <p className="text-lg font-bold opacity-80 uppercase" style={{ color: themeColor }}>{t.developer}</p>
       </footer>
 
       {/* DİL SEÇİCİ — Sağ Alt Köşe */}
@@ -588,7 +756,7 @@ export default function Menu() {
           title={LANGUAGES[lang].label}
         >
           <span style={{ filter: langOpen ? 'brightness(0.85)' : 'none', transition: 'filter 0.2s' }}>
-            {LANGUAGES[lang].flag}
+            {isTranslating ? '⏳' : LANGUAGES[lang].flag}
           </span>
         </button>
       </div>
@@ -628,7 +796,7 @@ export default function Menu() {
               {cart.map(item => (
                 <div key={item.product.id} className="flex justify-between items-center gap-4">
                   <div className="flex-1 leading-tight">
-                    <div className="font-bold uppercase" style={{ color: themeColor }}>{item.product.name}</div>
+                    <div className="font-bold uppercase" style={{ color: themeColor }}>{translations[item.product.name] || item.product.name}</div>
                     <div className="font-bold opacity-80">{item.product.price} ₺</div>
                   </div>
                   <div className="flex items-center gap-3 border-2 px-2 py-1 shrink-0" style={{ borderColor: themeColor, borderRadius: borderRadiusValue }}>

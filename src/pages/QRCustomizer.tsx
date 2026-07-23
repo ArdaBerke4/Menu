@@ -214,6 +214,32 @@ export default function QRCustomizer() {
     setTransparentBg(false);
   };
 
+  const handleRandomize = () => {
+    saveToHistory();
+    const randomDotStyle = DOT_STYLES[Math.floor(Math.random() * DOT_STYLES.length)].value;
+    const randomCornerStyle = CORNER_STYLES[Math.floor(Math.random() * CORNER_STYLES.length)].value;
+    
+    // Generate aesthetically pleasing contrast colors (dark dot, light bg)
+    const getRandomDarkColor = () => {
+      const r = Math.floor(Math.random() * 100);
+      const g = Math.floor(Math.random() * 100);
+      const b = Math.floor(Math.random() * 100);
+      return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
+    };
+    const getRandomLightColor = () => {
+      const r = Math.floor(Math.random() * 55) + 200;
+      const g = Math.floor(Math.random() * 55) + 200;
+      const b = Math.floor(Math.random() * 55) + 200;
+      return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
+    };
+
+    setDotColor(getRandomDarkColor());
+    setBgColor(getRandomLightColor());
+    setDotStyle(randomDotStyle);
+    setCornerStyle(randomCornerStyle);
+    setTransparentBg(Math.random() > 0.8); // 20% chance of transparent background
+  };
+
   // --- YÜKLEME / HATA ---
   if (loading) {
     return (
@@ -241,6 +267,12 @@ export default function QRCustomizer() {
             <p className="text-xl text-brand-dark/60 font-bold mt-1">{restaurant.name}</p>
           </div>
           <div className="flex gap-4">
+            <button
+              onClick={handleRandomize}
+              className="px-6 py-3 border-2 border-brand-dark bg-[#8fb38a] text-surface font-bold hover:bg-[#a3c79e] shadow-pixel-sm transition-transform active:scale-95"
+            >
+              🎲 RASTGELE
+            </button>
             <button
               onClick={handleUndo}
               disabled={history.length === 0}

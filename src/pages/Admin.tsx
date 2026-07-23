@@ -1,172 +1,18 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
+import * as XLSX from 'xlsx';
 import { supabase } from '../supabase';
 import { useNavigate } from 'react-router-dom';
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { useSensor, useSensors, PointerSensor, KeyboardSensor } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy, sortableKeyboardCoordinates, useSortable, arrayMove } from '@dnd-kit/sortable';
+import { sortableKeyboardCoordinates, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import Draggable from 'react-draggable';
 import type { DraggableData, DraggableEvent } from 'react-draggable';
+import { CampaignsTab } from '../components/admin/CampaignsTab';
+import { SettingsTab, DEFAULT_BG_COLOR } from '../components/admin/SettingsTab';
+import { MenuTab } from '../components/admin/MenuTab';
+import type { Restaurant, Category, Product, Campaign } from '../types/admin';
 
-// --- TYPESCRIPT ARAYÜZLERİ ---
-interface Restaurant {
-  id: string;
-  name: string;
-  user_id: string;
-  logo_url?: string;
-  primary_color?: string;
-  font_family?: string;
-  font_size?: string;
-  background_color?: string;
-  background_image_url?: string;
-  button_shape?: string;
-  description?: string;
-  address?: string;
-  layout_style?: 'list' | 'grid' | 'canvas';
-}
-
-interface Category {
-  id: string;
-  name: string;
-  restaurant_id: string;
-  sort_order?: number;
-  pos_x?: number;
-  pos_y?: number;
-}
-
-interface Product {
-  id: string;
-  name: string;
-  description?: string;
-  price: number;
-  category_id: string;
-  image_url?: string;
-  sort_order?: number;
-}
-
-interface Campaign {
-  id: string;
-  restaurant_id: string;
-  name: string;
-  discount_percent: number;
-  category_id: string | null;
-  is_active: boolean;
-  created_at?: string;
-}
-
-const PRESET_BACKGROUNDS = [
-  { id: 'none', name: 'Görsel Yok', css: '' },
-  {
-    id: 'paper',
-    name: 'İnce Kağıt Çizgisi',
-    css: 'repeating-linear-gradient(45deg, rgba(0,0,0,0.035) 0px, rgba(0,0,0,0.035) 1px, transparent 1px, transparent 5px)'
-  },
-  {
-    id: 'grid',
-    name: 'Kareli Defter',
-    css: 'repeating-linear-gradient(0deg, rgba(0,0,0,0.07) 0px, rgba(0,0,0,0.07) 1px, transparent 1px, transparent 28px), repeating-linear-gradient(90deg, rgba(0,0,0,0.07) 0px, rgba(0,0,0,0.07) 1px, transparent 1px, transparent 28px)'
-  },
-  {
-    id: 'weave',
-    name: 'Ekose Doku (Kafe)',
-    css: 'repeating-linear-gradient(45deg, rgba(0,0,0,0.05) 0px, rgba(0,0,0,0.05) 1px, transparent 1px, transparent 14px), repeating-linear-gradient(-45deg, rgba(0,0,0,0.05) 0px, rgba(0,0,0,0.05) 1px, transparent 1px, transparent 14px)'
-  },
-  {
-    id: 'dark',
-    name: 'Karanlık Gece',
-    css: 'repeating-linear-gradient(45deg, rgba(255,255,255,0.06) 0px, rgba(255,255,255,0.06) 1px, transparent 1px, transparent 10px), repeating-linear-gradient(-45deg, rgba(255,255,255,0.04) 0px, rgba(255,255,255,0.04) 1px, transparent 1px, transparent 10px)'
-  }
-];
-
-const FONT_SIZE_OPTIONS = [
-  { value: 'small',  label: 'Küçük',     previewSize: '0.85rem' },
-  { value: 'medium', label: 'Normal',    previewSize: '1rem'    },
-  { value: 'large',  label: 'Büyük',     previewSize: '1.2rem'  },
-  { value: 'xlarge', label: 'Çok Büyük', previewSize: '1.5rem'  },
-];
-
-// Yazı boyutuna göre Tailwind sınıf haritası
-const getFontSizeClasses = (size?: string) => {
-  switch (size) {
-    case 'small':  return { cat: 'text-lg',  product: 'text-lg',  desc: 'text-sm',  price: 'text-lg'  };
-    case 'large':  return { cat: 'text-3xl', product: 'text-3xl', desc: 'text-xl',  price: 'text-2xl' };
-    case 'xlarge': return { cat: 'text-4xl', product: 'text-4xl', desc: 'text-2xl', price: 'text-3xl' };
-    default:       return { cat: 'text-2xl', product: 'text-2xl', desc: 'text-lg',  price: 'text-xl'  };
-  }
-};
-
-const DEFAULT_BG_COLOR = '#F4E4C1';
-// -----------------------------
-
-function InlinePriceEdit({ product, onSave }: { product: Product, onSave: (id: string, newPrice: number) => void }) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [val, setVal] = useState(product.price.toString());
-
-  const handleSave = () => {
-    setIsEditing(false);
-    const num = parseFloat(val.replace(',', '.'));
-    if (!isNaN(num) && num !== product.price && num >= 0) {
-      onSave(product.id, num);
-    } else {
-      setVal(product.price.toString());
-    }
-  };
-
-  if (!isEditing) {
-    return (
-      <div 
-        className="bg-white border-2 border-brand-dark text-brand-dark px-4 py-2 font-bold text-2xl shadow-pixel-sm shrink-0 w-[120px] text-right cursor-pointer hover:bg-brand-light transition-colors group relative"
-        onClick={() => { setIsEditing(true); setVal(product.price.toString()); }}
-        title="Fiyatı hızlıca düzenlemek için tıklayın"
-      >
-        {product.price} ₺
-        <span className="absolute -top-2 -right-2 text-xs bg-[#5b7a57] text-white px-1 opacity-0 group-hover:opacity-100 transition-opacity">✍️</span>
-      </div>
-    );
-  }
-
-  return (
-    <input 
-      autoFocus
-      type="text" 
-      inputMode="decimal"
-      className="bg-white border-2 border-brand-dark text-brand-dark px-2 py-2 font-bold text-2xl shadow-pixel-sm shrink-0 w-[120px] text-right outline-none ring-4 ring-[#8fb38a] z-10 relative"
-      value={val}
-      onChange={(e) => setVal(e.target.value)}
-      onBlur={handleSave}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') handleSave();
-        if (e.key === 'Escape') { setIsEditing(false); setVal(product.price.toString()); }
-      }}
-    />
-  );
-}
-
-function DebouncedColorInput({ value, onChange, onFocus, disabled = false }: any) {
-  const [local, setLocal] = useState(value);
-  const timerRef = useRef<any>(null);
-
-  useEffect(() => {
-    setLocal(value);
-  }, [value]);
-
-  const handleChange = (e: any) => {
-    const newVal = e.target.value;
-    setLocal(newVal);
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => {
-      onChange(newVal);
-    }, 150);
-  };
-
-  return (
-    <div className="flex gap-4">
-      <input type="color" disabled={disabled} onFocus={onFocus} value={local} onChange={handleChange} className="w-16 h-12 border-2 border-brand-dark cursor-pointer bg-white p-1 disabled:opacity-50" />
-      <input type="text" disabled={disabled} onFocus={onFocus} value={local} onChange={handleChange} className="flex-1 px-4 py-2 border-2 border-brand-dark bg-white focus:outline-none disabled:opacity-50 font-bold" />
-    </div>
-  );
-}
-
+// Types are imported from ../types/admin
 function SortableCategoryItem({ category, onUp, onDown, isFirst, isLast }: any) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: category.id });
   const style = { transform: CSS.Transform.toString(transform), transition };
@@ -190,11 +36,12 @@ export default function Admin() {
   const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{isOpen: boolean, message: string, onConfirm: () => void}>({ isOpen: false, message: '', onConfirm: () => {} });
 
-  type ThemeState = { themeColor: string, themeFont: string, fontSize: string, bgColor: string, bgImageUrl: string, buttonShape: string, layoutStyle: string };
+  type ThemeState = { themeColor: string, themeFont: string, fontSize: string, bgColor: string, bgImageUrl: string, buttonShape: string, layoutStyle: string, headerStyle: string, navStyle: string, cardBgColor: string };
   const [settingsHistory, setSettingsHistory] = useState<ThemeState[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const saveToHistory = () => {
-    setSettingsHistory(prev => [...prev, { themeColor, themeFont, fontSize, bgColor, bgImageUrl, buttonShape, layoutStyle }]);
+    setSettingsHistory(prev => [...prev, { themeColor, themeFont, fontSize, bgColor, bgImageUrl, buttonShape, layoutStyle, headerStyle, navStyle, cardBgColor }]);
   };
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
@@ -222,6 +69,9 @@ export default function Admin() {
   const [bgUploadFile, setBgUploadFile] = useState<File | null>(null);
   const [buttonShape, setButtonShape] = useState('square');
   const [layoutStyle, setLayoutStyle] = useState<'list' | 'grid' | 'canvas'>('list');
+  const [headerStyle, setHeaderStyle] = useState<'center' | 'left' | 'banner'>('center');
+  const [navStyle, setNavStyle] = useState<'scroll' | 'tabs'>('scroll');
+  const [cardBgColor, setCardBgColor] = useState('#FFFFFF');
 
   // RESTORAN HAKKINDA
   const [restaurantDescription, setRestaurantDescription] = useState('');
@@ -246,14 +96,6 @@ export default function Admin() {
 
   // KAMPANYA YÖNETİMİ
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [campaignName, setCampaignName] = useState('');
-  const [campaignDiscount, setCampaignDiscount] = useState('');
-  const [campaignCategoryId, setCampaignCategoryId] = useState<string>('all');
-
-  // Canlı önizleme için hesaplanan değerler
-  const previewFs = getFontSizeClasses(fontSize);
-  const previewBorderRadius = buttonShape === 'pill' ? '999px' : buttonShape === 'rounded' ? '0.75rem' : '0px';
-  const isStandard = bgColor === DEFAULT_BG_COLOR && !bgImageUrl && !bgUploadFile;
 
   // DND Sensörleri
   const sensors = useSensors(
@@ -280,6 +122,9 @@ export default function Admin() {
     setBgImageUrl(restaurant.background_image_url || '');
     setButtonShape(restaurant.button_shape || 'square');
     setLayoutStyle(restaurant.layout_style || 'list');
+    setHeaderStyle(restaurant.header_style || 'center');
+    setNavStyle(restaurant.nav_style || 'scroll');
+    setCardBgColor(restaurant.card_bg_color || '#FFFFFF');
     setRestaurantDescription(restaurant.description || '');
     setRestaurantAddress(restaurant.address || '');
     setActiveTab('menu');
@@ -355,6 +200,9 @@ export default function Admin() {
       background_image_url: finalBgImageUrl,
       button_shape: buttonShape,
       layout_style: layoutStyle,
+      header_style: headerStyle,
+      nav_style: navStyle,
+      card_bg_color: cardBgColor,
     }).eq('id', selectedRestaurant.id).select().single();
 
     if (error) showToast("Güncelleme başarısız: " + error.message, 'error');
@@ -377,7 +225,10 @@ export default function Admin() {
       setBgColor(last.bgColor);
       setBgImageUrl(last.bgImageUrl);
       setButtonShape(last.buttonShape);
-      setLayoutStyle(last.layoutStyle);
+      setLayoutStyle(last.layoutStyle as any);
+      setHeaderStyle(last.headerStyle as any);
+      setNavStyle(last.navStyle as any);
+      setCardBgColor(last.cardBgColor);
       setSettingsHistory(prev => prev.slice(0, -1));
       showToast("Bir adım geri alındı.");
     } else if (selectedRestaurant) {
@@ -388,6 +239,9 @@ export default function Admin() {
       setBgImageUrl(selectedRestaurant.background_image_url || '');
       setButtonShape(selectedRestaurant.button_shape || 'square');
       setLayoutStyle(selectedRestaurant.layout_style || 'list');
+      setHeaderStyle(selectedRestaurant.header_style || 'center');
+      setNavStyle(selectedRestaurant.nav_style || 'scroll');
+      setCardBgColor(selectedRestaurant.card_bg_color || '#FFFFFF');
       setLogoFile(null);
       setBgUploadFile(null);
       showToast("Tüm değişiklikler sıfırlandı.");
@@ -439,6 +293,110 @@ export default function Admin() {
     setLoading(false);
   };
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedRestaurant) return;
+
+    setLoading(true);
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data, { type: 'array' });
+      const firstSheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[firstSheetName];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+      if (jsonData.length === 0) {
+        showToast("Excel dosyası boş.", "error");
+        return;
+      }
+
+      const newCategoriesMap: Record<string, string> = {}; 
+      const productsToInsert = [];
+      let newCategoriesCount = 0;
+
+      const categoryNames = [...new Set(jsonData.map((row: any) => row['Kategori']).filter(Boolean))];
+
+      let currentMaxSortOrder = categories.length > 0 ? Math.max(...categories.map(c => c.sort_order ?? 0)) : -1;
+      
+      for (const catName of categoryNames) {
+        const catNameStr = String(catName).trim();
+        const existingCat = categories.find(c => c.name.toLowerCase() === catNameStr.toLowerCase());
+        if (existingCat) {
+          newCategoriesMap[catNameStr] = existingCat.id;
+        } else {
+          currentMaxSortOrder += 1;
+          const { data: catData, error: catError } = await supabase
+            .from('categories')
+            .insert([{ name: catNameStr, restaurant_id: selectedRestaurant.id, sort_order: currentMaxSortOrder }])
+            .select()
+            .single();
+          
+          if (catData && !catError) {
+            newCategoriesMap[catNameStr] = catData.id;
+            setCategories(prev => [...prev, catData]);
+            newCategoriesCount++;
+          }
+        }
+      }
+
+      let maxProductSortOrder = products.length > 0 ? Math.max(...products.map(p => p.sort_order ?? 0)) : -1;
+
+      for (const row of jsonData as any[]) {
+        const catName = String(row['Kategori'] || '').trim();
+        const prodName = String(row['Ürün Adı'] || '').trim();
+        let priceStr = row['Fiyat'];
+        const desc = String(row['Açıklama'] || '').trim();
+
+        if (!catName || !prodName || priceStr === undefined) continue;
+
+        // Extract numbers and clean
+        if (typeof priceStr === 'string') {
+          priceStr = priceStr.replace(',', '.').replace(/[^0-9.]/g, '');
+        }
+        const price = parseFloat(priceStr);
+        if (isNaN(price)) continue;
+
+        // Match case-insensitively using the newCategoriesMap we built above
+        const matchingCatName = Object.keys(newCategoriesMap).find(k => k.toLowerCase() === catName.toLowerCase());
+        const catId = matchingCatName ? newCategoriesMap[matchingCatName] : null;
+
+        if (!catId) continue;
+
+        maxProductSortOrder += 1;
+        productsToInsert.push({
+          category_id: catId,
+          name: prodName,
+          description: desc,
+          price: price,
+          image_url: null,
+          sort_order: maxProductSortOrder
+        });
+      }
+
+      if (productsToInsert.length > 0) {
+        const { data: prodData, error: prodError } = await supabase
+          .from('products')
+          .insert(productsToInsert)
+          .select();
+
+        if (prodData && !prodError) {
+          setProducts(prev => [...prev, ...prodData]);
+          showToast(`${newCategoriesCount} yeni kategori ve ${productsToInsert.length} ürün eklendi!`);
+        } else {
+          showToast("Ürünler eklenirken hata oluştu.", "error");
+        }
+      } else {
+        showToast("Eklenecek geçerli ürün bulunamadı. Sütun isimlerini kontrol edin (Kategori, Ürün Adı, Fiyat).", "error");
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Excel dosyası okunurken hata oluştu.", "error");
+    } finally {
+      setLoading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   const handleDragEndCategories = async (event: DragEndEvent) => {
     const { active, over } = event;
     if (active.id !== over?.id) {
@@ -457,7 +415,7 @@ export default function Admin() {
     }
   };
 
-  const handleCanvasDragStop = (e: DraggableEvent, data: DraggableData, category: Category) => {
+  const handleCanvasDragStop = (_e: DraggableEvent, data: DraggableData, category: Category) => {
     const newX = data.x;
     const newY = data.y;
     setCategories(categories.map(c => c.id === category.id ? { ...c, pos_x: newX, pos_y: newY } : c));
@@ -545,23 +503,7 @@ export default function Admin() {
     const fileInput = document.getElementById('imageInput') as HTMLInputElement; if (fileInput) fileInput.value = '';
   };
   
-  const handleDeleteCategory = async (categoryId: string) => {
-    setConfirmDialog({
-      isOpen: true,
-      message: "Kategoriyi ve içindeki tüm ürünleri silmek istediğine emin misin? Bu işlem geri alınamaz.",
-      onConfirm: async () => {
-        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
-        const { error } = await supabase.from('categories').delete().eq('id', categoryId);
-        if (!error) {
-          setCategories(categories.filter(c => c.id !== categoryId));
-          if (selectedCategoryId === categoryId) setSelectedCategoryId(categories[0]?.id || '');
-          showToast("Kategori silindi!");
-        } else {
-          showToast("Kategori silinemedi.", 'error');
-        }
-      }
-    });
-  };
+
 
   const handleInlinePriceUpdate = async (productId: string, newPrice: number) => {
     const { error } = await supabase.from('products').update({ price: newPrice }).eq('id', productId);
@@ -594,46 +536,7 @@ export default function Admin() {
   const handleLogout = async () => { await supabase.auth.signOut(); navigate('/auth'); };
   const menuLink = selectedRestaurant ? `${window.location.origin}/menu/${selectedRestaurant.id}` : '';
 
-  // KAMPANYA CRUD
-  const handleCreateCampaign = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedRestaurant) return;
-    const discount = parseFloat(campaignDiscount.replace(',', '.'));
-    if (isNaN(discount) || discount <= 0 || discount > 100) { showToast('Geçerli bir yüzde girin (1-100).', 'error'); return; }
-    setLoading(true);
-    const { data, error } = await supabase.from('campaigns').insert([{
-      restaurant_id: selectedRestaurant.id,
-      name: campaignName || 'Kampanya',
-      discount_percent: discount,
-      category_id: campaignCategoryId === 'all' ? null : campaignCategoryId,
-      is_active: true,
-    }]).select().single();
-    if (error) showToast('Kampanya oluşturulamadı: ' + error.message, 'error');
-    else if (data) { setCampaigns([data, ...campaigns]); setCampaignName(''); setCampaignDiscount(''); setCampaignCategoryId('all'); showToast("Kampanya başarıyla oluşturuldu!"); }
-    setLoading(false);
-  };
-
-  const toggleCampaignActive = async (campaign: Campaign) => {
-    const { data } = await supabase.from('campaigns').update({ is_active: !campaign.is_active }).eq('id', campaign.id).select().single();
-    if (data) setCampaigns(campaigns.map(c => c.id === campaign.id ? data : c));
-  };
-
-  const deleteCampaign = async (campaignId: string) => {
-    setConfirmDialog({
-      isOpen: true,
-      message: "Bu kampanyayı silmek istediğine emin misin? Ürünlerin fiyatları eski haline dönecektir.",
-      onConfirm: async () => {
-        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
-        const { error } = await supabase.from('campaigns').delete().eq('id', campaignId);
-        if (!error) {
-          setCampaigns(campaigns.filter(c => c.id !== campaignId));
-          showToast("Kampanya silindi.");
-        } else {
-          showToast("Kampanya silinemedi.", 'error');
-        }
-      }
-    });
-  };
+  // KAMPANYA CRUD (Moved to CampaignsTab.tsx)
 
   const sortedCategories = useMemo(() => [...categories].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)), [categories]);
   const filteredProducts = useMemo(() => products
@@ -867,66 +770,14 @@ export default function Admin() {
 
         {/* ===== KAMPANYA DÜZENLE ===== */}
         {activeTab === 'campaigns' && selectedRestaurant && (
-          <div className="max-w-3xl mx-auto">
-            <header className="mb-8">
-              <h1 className="text-4xl font-bold uppercase mb-2">🏷️ Kampanya Düzenle</h1>
-              <p className="text-lg text-brand-dark/60 font-bold">Kategoriye veya tüm ürünlere indirim kampanyası uygula. Kampanyalar gerçek fiyatları değiştirmez, sadece müşteri menüsünde üzeri çizili eski fiyat + yeni fiyat gösterilir.</p>
-            </header>
-
-            {/* Yeni Kampanya Formu */}
-            <form onSubmit={handleCreateCampaign} className="bg-[#F4E4C1] border-4 border-brand-dark shadow-pixel p-6 mb-8">
-              <h2 className="text-2xl font-bold uppercase mb-4 border-b-2 border-brand-dark pb-2">Yeni Kampanya Oluştur</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label className="block font-bold mb-1">Kampanya Adı</label>
-                  <input value={campaignName} onChange={e => setCampaignName(e.target.value)} placeholder="Ör: Yaz İndirimi" className="w-full px-4 py-3 border-2 border-brand-dark bg-white focus:outline-none" />
-                </div>
-                <div>
-                  <label className="block font-bold mb-1">İndirim Yüzdesi (%)</label>
-                  <input value={campaignDiscount} onChange={e => setCampaignDiscount(e.target.value)} placeholder="Ör: 20" type="text" inputMode="decimal" className="w-full px-4 py-3 border-2 border-brand-dark bg-white focus:outline-none" required />
-                </div>
-              </div>
-              <div className="mb-4">
-                <label className="block font-bold mb-1">Hedef</label>
-                <select value={campaignCategoryId} onChange={e => setCampaignCategoryId(e.target.value)} className="w-full px-4 py-3 border-2 border-brand-dark bg-white focus:outline-none">
-                  <option value="all">TÜM ÜRÜNLER</option>
-                  {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
-                </select>
-              </div>
-              <button type="submit" disabled={loading} className="w-full py-3 bg-brand text-surface border-2 border-brand-dark font-bold uppercase text-xl hover:opacity-90 active:translate-y-1 shadow-pixel disabled:opacity-50">
-                {loading ? 'Oluşturuluyor...' : 'Kampanya Oluştur ✓'}
-              </button>
-            </form>
-
-            {/* Mevcut Kampanyalar */}
-            <div className="bg-[#F4E4C1] border-4 border-brand-dark shadow-pixel p-6">
-              <h2 className="text-2xl font-bold uppercase mb-4 border-b-2 border-brand-dark pb-2">Mevcut Kampanyalar</h2>
-              {campaigns.length === 0 ? (
-                <p className="text-center opacity-60 font-bold py-8">Henüz kampanya yok. Yukarıdan oluşturabilirsin.</p>
-              ) : (
-                <div className="space-y-3">
-                  {campaigns.map(camp => (
-                    <div key={camp.id} className={`flex items-center justify-between gap-4 p-4 border-2 border-brand-dark transition-all ${camp.is_active ? 'bg-white' : 'bg-gray-200 opacity-60'}`}>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-bold text-xl truncate">{camp.name}</div>
-                        <div className="text-sm font-bold opacity-70">
-                          %{camp.discount_percent} indirim • {camp.category_id ? categories.find(c => c.id === camp.category_id)?.name || 'Silinmiş Kategori' : 'Tüm Ürünler'}
-                        </div>
-                      </div>
-                      <div className="flex gap-2 shrink-0">
-                        <button onClick={() => toggleCampaignActive(camp)} className={`px-4 py-2 border-2 border-brand-dark font-bold text-sm transition-all active:scale-95 ${camp.is_active ? 'bg-[#8fb38a] text-brand-dark' : 'bg-white text-brand-dark'}`}>
-                          {camp.is_active ? 'AKTİF ✓' : 'PASİF'}
-                        </button>
-                        <button onClick={() => deleteCampaign(camp.id)} className="px-4 py-2 border-2 border-brand-dark bg-red-100 text-red-700 font-bold text-sm hover:bg-red-200 transition-all active:scale-95">
-                          SİL
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
+          <CampaignsTab 
+            campaigns={campaigns}
+            setCampaigns={setCampaigns}
+            categories={categories}
+            selectedRestaurant={selectedRestaurant}
+            showToast={showToast}
+            setConfirmDialog={setConfirmDialog}
+          />
         )}
 
         {/* ===== RESTORAN HAKKINDA ===== */}
@@ -978,386 +829,71 @@ export default function Admin() {
 
         {/* ===== GÖRÜNÜM AYARLARI ===== */}
         {activeTab === 'settings' && selectedRestaurant && (
-          <div className="max-w-4xl mx-auto">
-            <header className="mb-8">
-              <h1 className="text-4xl font-bold uppercase mb-2">Görünüm ve Tema Ayarları</h1>
-            </header>
-
-            <form onSubmit={handleUpdateSettings} className="bg-[#F4E4C1] border-4 border-brand-dark shadow-pixel p-8 space-y-8">
-              <div className="grid grid-cols-2 gap-8">
-
-                {/* SOL KOLON */}
-                <div className="space-y-6">
-                  <div>
-                    <label className="block font-bold mb-2">Mekan Logosu</label>
-                    <input type="file" accept="image/*" onChange={(e) => e.target.files && setLogoFile(e.target.files[0])} className="w-full bg-white px-4 py-2 border-2 border-brand-dark file:mr-4 file:bg-brand-dark file:text-surface focus:outline-none text-base" />
-                  </div>
-
-                  <div>
-                    <label className="block font-bold mb-2">Marka Vurgu Rengi</label>
-                    <DebouncedColorInput value={themeColor} onChange={setThemeColor} onFocus={saveToHistory} />
-                  </div>
-
-                  <div>
-                    <label className="block font-bold mb-2">Menü Yazı Tipi (Font)</label>
-                    <select value={themeFont} onFocus={saveToHistory} onChange={(e) => setThemeFont(e.target.value)} className="w-full px-4 py-3 border-2 border-brand-dark bg-white focus:outline-none" style={{ fontFamily: themeFont, fontSize: themeFont.includes('VT323') ? '1.25rem' : '1rem' }}>
-                      <option value='"VT323", monospace' style={{ fontFamily: '"VT323", monospace', fontSize: '1.25rem' }}>VT323 (Klasik Oyun / Cozy)</option>
-                      <option value='"Courier New", Courier, monospace' style={{ fontFamily: '"Courier New", Courier, monospace' }}>Courier New (Daktilo / Retro)</option>
-                      <option value='Arial, sans-serif' style={{ fontFamily: 'Arial, sans-serif' }}>Arial (Sade / Modern)</option>
-                      <option value='"Times New Roman", Times, serif' style={{ fontFamily: '"Times New Roman", Times, serif' }}>Times New Roman (Şık / Klasik)</option>
-                    </select>
-                  </div>
-
-                  {/* YAZI BOYUTU */}
-                  <div>
-                    <label className="block font-bold mb-2">Menü Yazı Boyutu</label>
-                    <div className="grid grid-cols-4 gap-2 mb-4">
-                      {FONT_SIZE_OPTIONS.map(opt => (
-                        <button
-                          key={opt.value}
-                          type="button"
-                          onClick={() => setFontSize(opt.value)}
-                          className={`py-3 border-2 border-brand-dark font-bold flex flex-col items-center gap-1 transition-colors ${fontSize === opt.value ? 'bg-brand text-surface shadow-pixel' : 'bg-white text-brand-dark hover:bg-brand-light'}`}
-                        >
-                          <span style={{ fontSize: opt.previewSize, fontFamily: themeFont }}>A</span>
-                          <span className="text-xs">{opt.label}</span>
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* CANLI ÖNİZLEME */}
-                    <div className="border-2 border-brand-dark overflow-hidden">
-                      <div className="bg-brand-dark px-3 py-1 text-surface text-sm font-bold uppercase">
-                        Canlı Menü Önizlemesi
-                      </div>
-                      <div
-                        className="p-4"
-                        style={{
-                          fontFamily: themeFont,
-                          backgroundColor: bgColor,
-                          backgroundImage: bgImageUrl && !bgUploadFile ? bgImageUrl : 'none',
-                        }}
-                      >
-                        {/* Kategori başlığı */}
-                        <div
-                          className={`inline-block px-4 py-1 mb-3 font-bold uppercase text-white ${previewFs.cat}`}
-                          style={{ backgroundColor: themeColor, borderRadius: previewBorderRadius }}
-                        >
-                          Kahveler
-                        </div>
-                        {/* Ürün kartı */}
-                        <div
-                          className="flex gap-3 bg-white/95 border-2 p-3"
-                          style={{ borderColor: themeColor, borderRadius: previewBorderRadius }}
-                        >
-                          <div className="w-14 h-14 shrink-0 bg-gray-100 border-2 flex items-center justify-center text-2xl" style={{ borderColor: themeColor, borderRadius: previewBorderRadius }}>☕</div>
-                          <div className="flex-1 min-w-0">
-                            <p className={`font-bold uppercase leading-tight ${previewFs.product}`} style={{ color: themeColor, fontFamily: themeFont }}>Flat White</p>
-                            <p className={`text-gray-500 leading-snug ${previewFs.desc}`} style={{ fontFamily: themeFont }}>Sütlü espresso içeceği</p>
-                          </div>
-                          <div
-                            className={`font-bold border-2 px-2 py-1 self-center whitespace-nowrap ${previewFs.price}`}
-                            style={{ borderColor: themeColor, color: themeColor, fontFamily: themeFont, borderRadius: previewBorderRadius }}
-                          >
-                            120 ₺
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block font-bold mb-2">Buton Şekilleri</label>
-                    <select value={buttonShape} onFocus={saveToHistory} onChange={(e) => setButtonShape(e.target.value)} className="w-full px-4 py-3 border-2 border-brand-dark bg-white focus:outline-none text-base">
-                      <option value='square'>Keskin Kare</option>
-                      <option value='rounded'>Hafif Yuvarlak</option>
-                      <option value='pill'>Tam Yuvarlak (Hap)</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block font-bold mb-2 text-brand">Menü Düzeni (Layout)</label>
-                    <div className="flex flex-col gap-3">
-                      <label className={`border-2 border-brand-dark p-3 cursor-pointer flex gap-3 transition-colors ${layoutStyle === 'list' ? 'bg-[#8fb38a] text-brand-dark' : 'bg-white'}`}>
-                        <input type="radio" name="layout" value="list" checked={layoutStyle === 'list'} onChange={() => { saveToHistory(); setLayoutStyle('list'); }} className="w-5 h-5 accent-brand-dark" />
-                        <div>
-                          <div className="font-bold">Dikey Liste</div>
-                          <div className="text-sm opacity-80">Standart alt alta dizilim.</div>
-                        </div>
-                      </label>
-                      <label className={`border-2 border-brand-dark p-3 cursor-pointer flex gap-3 transition-colors ${layoutStyle === 'grid' ? 'bg-[#8fb38a] text-brand-dark' : 'bg-white'}`}>
-                        <input type="radio" name="layout" value="grid" checked={layoutStyle === 'grid'} onChange={() => { saveToHistory(); setLayoutStyle('grid'); }} className="w-5 h-5 accent-brand-dark" />
-                        <div>
-                          <div className="font-bold">Izgara (Grid)</div>
-                          <div className="text-sm opacity-80">Yan yana dizilmiş kartlar.</div>
-                        </div>
-                      </label>
-                      <label className={`border-2 border-brand-dark p-3 cursor-pointer flex gap-3 transition-colors ${layoutStyle === 'canvas' ? 'bg-[#8fb38a] text-brand-dark' : 'bg-white'}`}>
-                        <input type="radio" name="layout" value="canvas" checked={layoutStyle === 'canvas'} onChange={() => setLayoutStyle('canvas')} className="w-5 h-5 accent-brand-dark" />
-                        <div>
-                          <div className="font-bold">Serbest Tuval (Harita Modu)</div>
-                          <div className="text-sm opacity-80">Kategorileri ekranda özgürce sürükle.</div>
-                        </div>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-
-                {/* SAĞ KOLON */}
-                <div className="space-y-6 border-l-4 border-brand-dark pl-8">
-
-                  <div>
-                    <label className="block font-bold mb-2">Arka Plan Rengi</label>
-                    <DebouncedColorInput value={bgColor} onChange={setBgColor} onFocus={saveToHistory} />
-                  </div>
-
-                  {/* STANDART BUTON */}
-                  <div>
-                    <label className="block font-bold mb-2">Hazır Arka Plan Seçimi</label>
-
-                    <button
-                      type="button"
-                      onClick={() => { saveToHistory(); setBgColor(DEFAULT_BG_COLOR); setBgImageUrl(''); setBgUploadFile(null); }}
-                      className={`w-full h-14 border-4 flex items-center justify-center gap-3 font-bold text-brand-dark mb-3 transition-all ${isStandard ? 'border-[#8fb38a] ring-4 ring-[#8fb38a] scale-[1.02]' : 'border-brand-dark hover:scale-[1.02]'}`}
-                      style={{ backgroundColor: DEFAULT_BG_COLOR }}
-                    >
-                      <span className="w-6 h-6 border-2 border-brand-dark inline-block" style={{ backgroundColor: '#8B5A2B' }} />
-                      <span className="text-lg uppercase tracking-wide">
-                        {isStandard ? '✓ Standart (Aktif)' : 'Standart (Admin Teması)'}
-                      </span>
-                    </button>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      {PRESET_BACKGROUNDS.map(preset => (
-                        <button
-                          key={preset.id}
-                          type="button"
-                          onClick={() => { saveToHistory(); setBgImageUrl(preset.css); setBgUploadFile(null); }}
-                          className={`h-16 border-2 border-brand-dark flex items-center justify-center transition-transform ${bgImageUrl === preset.css && !bgUploadFile && !isStandard ? 'ring-4 ring-[#8fb38a] scale-105' : 'hover:scale-105'}`}
-                          style={{ backgroundColor: bgColor, backgroundImage: preset.css || 'none' }}
-                        >
-                          <span className="bg-white/90 text-brand-dark px-2 py-1 text-sm font-bold border border-brand-dark shadow-sm">{preset.name}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block font-bold mb-2 text-brand">Veya Özel Arka Plan Yükle</label>
-                    <input type="file" accept="image/*" onChange={(e) => { e.target.files && setBgUploadFile(e.target.files[0]); setBgImageUrl(''); }} className="w-full bg-white px-4 py-2 border-2 border-brand-dark text-sm file:mr-4 file:bg-brand-dark file:text-surface focus:outline-none" />
-                    {bgUploadFile && <p className="text-xs text-[#5b7a57] mt-1 font-bold">Özel dosya seçildi.</p>}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex gap-4">
-                <button type="button" onClick={handleUndoSettings} className="w-1/3 bg-gray-300 text-brand-dark border-2 border-brand-dark px-6 py-4 font-bold text-xl hover:bg-gray-400 transition-colors">
-                  GERİ AL
-                </button>
-                <button type="submit" disabled={loading} className="w-2/3 bg-[#8fb38a] text-brand-dark border-2 border-brand-dark px-6 py-4 shadow-pixel font-bold text-2xl hover:bg-[#a3c79e] transition-colors">
-                  {loading ? 'KAYDEDİLİYOR...' : 'TÜM AYARLARI KAYDET'}
-                </button>
-              </div>
-            </form>
-          </div>
+          <SettingsTab
+            themeColor={themeColor} setThemeColor={setThemeColor}
+            themeFont={themeFont} setThemeFont={setThemeFont}
+            fontSize={fontSize} setFontSize={setFontSize}
+            bgColor={bgColor} setBgColor={setBgColor}
+            bgImageUrl={bgImageUrl} setBgImageUrl={setBgImageUrl}
+            buttonShape={buttonShape} setButtonShape={setButtonShape}
+            layoutStyle={layoutStyle} setLayoutStyle={setLayoutStyle}
+            headerStyle={headerStyle} setHeaderStyle={setHeaderStyle}
+            navStyle={navStyle} setNavStyle={setNavStyle}
+            cardBgColor={cardBgColor} setCardBgColor={setCardBgColor}
+            logoFile={logoFile} setLogoFile={setLogoFile}
+            bgUploadFile={bgUploadFile} setBgUploadFile={setBgUploadFile}
+            selectedRestaurant={selectedRestaurant}
+            saveSettings={handleUpdateSettings}
+            handleUndoSettings={handleUndoSettings}
+            settingsHistory={settingsHistory}
+            saveToHistory={saveToHistory}
+            loading={loading}
+            fileInputRef={fileInputRef}
+          />
         )}
 
         {/* ===== MENÜ/ENVANTER ===== */}
         {activeTab === 'menu' && selectedRestaurant && (
-          <div className="max-w-[1400px] flex gap-10">
-            <div className="w-[450px] shrink-0 space-y-8">
-              <div className="bg-[#F4E4C1] border-4 border-brand-dark shadow-pixel p-6">
-                <h2 className="text-2xl font-bold mb-4 uppercase text-brand-dark border-b-2 border-brand-dark pb-2">Yeni Kategori Ekle</h2>
-                <form onSubmit={handleCreateCategory} className="flex gap-4">
-                  <input type="text" required value={categoryName} onChange={(e) => setCategoryName(e.target.value)} placeholder="Örn: Kahveler..." className="flex-1 px-4 py-2 border-2 border-brand-dark bg-white focus:outline-none" />
-                  <button type="submit" disabled={loading} className="bg-brand text-surface border-2 border-brand-dark px-6 py-2 shadow-pixel-sm hover:opacity-90">EKLE</button>
-                </form>
-              </div>
-
-              {sortedCategories.length > 0 && (
-                <div className="bg-[#F4E4C1] border-4 border-brand-dark shadow-pixel p-6">
-                  {layoutStyle === 'canvas' ? (
-                    <>
-                      <h2 className="text-2xl font-bold mb-2 uppercase text-brand-dark border-b-2 border-brand-dark pb-2">Serbest Tuval (Harita Modu)</h2>
-                      <p className="text-sm font-bold opacity-70 mb-4">Müşterilerin göreceği haritadaki kategori konumlarını ayarlayın. Kutuları tutup sürükleyin.</p>
-                      <div className="relative border-4 border-dashed border-brand-dark bg-white h-[400px] overflow-hidden">
-                        {categories.map(cat => (
-                          <Draggable
-                            key={cat.id}
-                            defaultPosition={{ x: cat.pos_x || 0, y: cat.pos_y || 0 }}
-                            onStop={(e, data) => handleCanvasDragStop(e, data, cat)}
-                            bounds="parent"
-                          >
-                            <div className="absolute cursor-grab active:cursor-grabbing bg-brand text-surface font-bold px-4 py-2 border-2 border-brand-dark shadow-pixel hover:scale-105 transition-transform z-10 whitespace-nowrap">
-                              {cat.name}
-                            </div>
-                          </Draggable>
-                        ))}
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <h2 className="text-2xl font-bold mb-4 uppercase text-brand-dark border-b-2 border-brand-dark pb-2">Kategori Sıralaması</h2>
-                      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEndCategories}>
-                        <SortableContext items={sortedCategories.map(c => c.id)} strategy={verticalListSortingStrategy}>
-                          <div className="space-y-0">
-                            {sortedCategories.map((cat, index) => (
-                              <SortableCategoryItem 
-                                key={cat.id} 
-                                category={cat} 
-                                onUp={moveCategory} 
-                                onDown={moveCategory} 
-                                isFirst={index === 0} 
-                                isLast={index === sortedCategories.length - 1} 
-                              />
-                            ))}
-                          </div>
-                        </SortableContext>
-                      </DndContext>
-                    </>
-                  )}
-                </div>
-              )}
-
-              <div className={`bg-[#F4E4C1] border-4 border-brand-dark shadow-pixel p-6 transition-colors duration-300 ${editingProductId ? 'bg-[#e8f4e1]' : ''}`}>
-                <h2 className="text-2xl font-bold mb-4 uppercase text-brand-dark border-b-2 border-brand-dark pb-2">
-                  {editingProductId ? 'Ürünü Düzenle' : 'Yeni Ürün Ekle'}
-                </h2>
-                <form onSubmit={handleSubmitProduct} className="space-y-4">
-                  <div>
-                    <label className="block font-bold mb-1">Kategori</label>
-                    <select required value={selectedCategoryId} onChange={(e) => setSelectedCategoryId(e.target.value)} className="w-full px-4 py-2 border-2 border-brand-dark bg-white focus:outline-none">
-                      {sortedCategories.map((cat) => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block font-bold mb-1">Ürün Adı</label>
-                    <input type="text" required value={productName} onChange={(e) => setProductName(e.target.value)} placeholder="Örn: Flat White" className="w-full px-4 py-2 border-2 border-brand-dark bg-white focus:outline-none" />
-                  </div>
-                  <div>
-                    <label className="block font-bold mb-1">Açıklama</label>
-                    <textarea rows={2} value={productDesc} onChange={(e) => setProductDesc(e.target.value)} placeholder="Kısa açıklama..." className="w-full px-4 py-2 border-2 border-brand-dark bg-white focus:outline-none resize-none" />
-                  </div>
-                  <div>
-                    <label className="block font-bold mb-1">{editingProductId ? 'Yeni Görsel' : 'Ürün Görseli'}</label>
-                    <input id="imageInput" type="file" accept="image/*" onChange={(e) => e.target.files && setImageFile(e.target.files[0])} className="w-full bg-white px-4 py-2 border-2 border-brand-dark focus:outline-none file:mr-4 file:bg-brand-dark file:text-surface text-base" />
-                  </div>
-                  <div>
-                    <label className="block font-bold mb-1">Fiyat (₺)</label>
-                    <input type="text" inputMode="decimal" required value={productPrice} onChange={(e) => setProductPrice(e.target.value)} placeholder="Örn: 120" className="w-full px-4 py-2 border-2 border-brand-dark bg-white focus:outline-none" />
-                  </div>
-                  <div className="flex gap-4 pt-2">
-                    <button type="submit" disabled={loading} className="flex-1 bg-brand text-surface border-2 border-brand-dark px-4 py-3 text-lg shadow-pixel hover:opacity-90">
-                      {loading ? 'BEKLEYİN...' : (editingProductId ? 'GÜNCELLE' : 'EKLE')}
-                    </button>
-                    {editingProductId && <button type="button" onClick={resetProductForm} className="bg-gray-300 text-brand-dark border-2 border-brand-dark px-4 py-3 text-lg shadow-pixel hover:bg-gray-400">İPTAL</button>}
-                  </div>
-                </form>
-              </div>
-            </div>
-
-            <div className="flex-1 flex flex-col space-y-6">
-              <div className="bg-[#F4E4C1] border-4 border-brand-dark shadow-pixel p-4 space-y-4">
-                <div className="flex gap-4">
-                  <div className="flex-1 flex border-2 border-brand-dark bg-white">
-                    <span className="px-4 py-3 border-r-2 border-brand-dark bg-brand-light font-bold">ARA:</span>
-                    <input type="text" placeholder="Ürün adı veya açıklama..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="flex-1 px-4 py-2 focus:outline-none bg-transparent" />
-                  </div>
-                  <select value={filterCategoryId} onChange={(e) => setFilterCategoryId(e.target.value)} className="w-[250px] px-4 py-3 border-2 border-brand-dark bg-white focus:outline-none cursor-pointer">
-                    <option value="">Tüm Kategoriler</option>
-                    {sortedCategories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
-                  </select>
-                </div>
-
-                <div className="flex items-center gap-3 flex-wrap">
-                  <span className="font-bold text-brand-dark shrink-0">FİYAT SIRALA:</span>
-                  <div className="flex border-2 border-brand-dark">
-                    <button type="button" onClick={() => setSortByPrice(sortByPrice === 'asc' ? null : 'asc')} className={`px-4 py-2 font-bold transition-colors ${sortByPrice === 'asc' ? 'bg-brand text-surface' : 'bg-brand-light text-brand-dark hover:bg-white'}`}>Artan ↑</button>
-                    <button type="button" onClick={() => setSortByPrice(sortByPrice === 'desc' ? null : 'desc')} className={`px-4 py-2 font-bold border-l-2 border-brand-dark transition-colors ${sortByPrice === 'desc' ? 'bg-brand text-surface' : 'bg-brand-light text-brand-dark hover:bg-white'}`}>Azalan ↓</button>
-                  </div>
-                  {sortByPrice && (
-                    <>
-                      <button type="button" onClick={() => setSortByPrice(null)} className="px-3 py-2 bg-gray-300 text-brand-dark border-2 border-brand-dark font-bold hover:bg-gray-400 text-sm">Sıfırla ✕</button>
-                      <span className="text-sm font-bold text-[#5b7a57] bg-[#e8f4e1] border border-[#8fb38a] px-3 py-1">{sortByPrice === 'asc' ? '💰 Ucuzdan pahalıya' : '💎 Pahalıdan ucuya'}</span>
-                    </>
-                  )}
-                </div>
-
-                {selectedProductIds.length > 0 && (
-                  <div className="bg-[#e8f4e1] border-2 border-[#8fb38a] p-3 space-y-3">
-                    <div className="flex items-center justify-between flex-wrap gap-3">
-                      <span className="font-bold text-[#5b7a57] px-2">{selectedProductIds.length} Ürün Seçildi</span>
-                      <div className="flex gap-3">
-                        <button type="button" onClick={() => { setBulkMode(bulkMode === 'increase' ? null : 'increase'); setBulkValue(''); }} className={`font-bold border-2 border-brand-dark px-4 py-1 shadow-pixel-sm hover:scale-105 transition-transform ${bulkMode === 'increase' ? 'bg-brand text-surface' : 'bg-[#8fb38a] text-surface'}`}>+ Toplu Zam</button>
-                        <button type="button" onClick={() => { setBulkMode(bulkMode === 'decrease' ? null : 'decrease'); setBulkValue(''); }} className={`font-bold border-2 border-brand-dark px-4 py-1 shadow-pixel-sm hover:scale-105 transition-transform ${bulkMode === 'decrease' ? 'bg-brand text-surface' : 'bg-brand-light text-brand-dark'}`}>- Toplu İndirim</button>
-                        <button type="button" onClick={handleBulkDelete} className="bg-[#d97777] text-surface font-bold border-2 border-brand-dark px-4 py-1 shadow-pixel-sm hover:scale-105 transition-transform">Toplu Sil</button>
-                      </div>
-                    </div>
-                    {bulkMode && (
-                      <div className="flex flex-wrap items-center gap-3 bg-white border-2 border-brand-dark p-3">
-                        <span className="font-bold whitespace-nowrap">{bulkMode === 'increase' ? 'Zam miktarı:' : 'İndirim miktarı:'}</span>
-                        <div className="flex border-2 border-brand-dark">
-                          <button type="button" onClick={() => setBulkValueType('percent')} className={`px-3 py-2 font-bold ${bulkValueType === 'percent' ? 'bg-brand text-surface' : 'bg-white text-brand-dark'}`}>Yüzde (%)</button>
-                          <button type="button" onClick={() => setBulkValueType('fixed')} className={`px-3 py-2 font-bold border-l-2 border-brand-dark ${bulkValueType === 'fixed' ? 'bg-brand text-surface' : 'bg-white text-brand-dark'}`}>Sabit Tutar (₺)</button>
-                        </div>
-                        <div className="flex items-center border-2 border-brand-dark">
-                          <input type="text" inputMode="decimal" value={bulkValue} onChange={(e) => setBulkValue(e.target.value)} placeholder="0" className="w-24 px-3 py-2 focus:outline-none text-right" autoFocus />
-                          <span className="px-3 py-2 bg-brand-light border-l-2 border-brand-dark font-bold">{bulkValueType === 'percent' ? '%' : '₺'}</span>
-                        </div>
-                        <button type="button" onClick={handleApplyBulkAction} disabled={loading || !bulkValue} className="bg-[#8fb38a] text-surface font-bold border-2 border-brand-dark px-5 py-2 shadow-pixel-sm hover:scale-105 disabled:opacity-50">{loading ? 'UYGULANIYOR...' : 'UYGULA'}</button>
-                        <button type="button" onClick={() => { setBulkMode(null); setBulkValue(''); }} className="bg-gray-300 text-brand-dark font-bold border-2 border-brand-dark px-3 py-2 hover:bg-gray-400">İPTAL</button>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              <div className="bg-white border-4 border-brand-dark shadow-pixel overflow-hidden flex flex-col">
-                <div className="flex items-center gap-4 border-b-4 border-brand-dark bg-[#F4E4C1] p-4 font-bold text-xl uppercase">
-                  <label className="flex items-center gap-3 cursor-pointer select-none">
-                    <input type="checkbox" checked={filteredProducts.length > 0 && selectedProductIds.length === filteredProducts.length} onChange={toggleSelectAll} className="w-6 h-6 border-2 border-brand-dark accent-[#8fb38a] cursor-pointer" />
-                    Tümünü Seç
-                  </label>
-                  <span className="ml-auto text-brand">{filteredProducts.length} Ürün Listeleniyor</span>
-                </div>
-                <div className="overflow-y-auto max-h-[600px] p-4 space-y-3">
-                  {filteredProducts.length === 0 ? (
-                    <div className="text-center py-10 font-bold text-brand-dark/50">Bu kriterlere uygun ürün bulunamadı.</div>
-                  ) : (
-                    filteredProducts.map(product => {
-                      const siblings = productsByCategoryId[product.category_id] || [];
-                      const siblingIndex = siblings.findIndex(p => p.id === product.id);
-                      return (
-                        <div key={product.id} className={`border-2 border-brand-dark p-3 flex gap-4 items-center transition-all ${selectedProductIds.includes(product.id) ? 'bg-[#e8f4e1]' : 'bg-surface hover:bg-gray-50'}`}>
-                          <input type="checkbox" checked={selectedProductIds.includes(product.id)} onChange={() => toggleSelectProduct(product.id)} className="w-6 h-6 border-2 border-brand-dark accent-[#8fb38a] cursor-pointer shrink-0" />
-                          {product.image_url && (
-                            <div className="w-16 h-16 border-2 border-brand-dark bg-white shrink-0">
-                              <img src={product.image_url} alt={product.name} loading="lazy" className="w-full h-full object-cover" />
-                            </div>
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-bold text-2xl text-brand-dark uppercase truncate">{product.name}</h3>
-                            <div className="text-sm font-bold text-brand bg-brand-light px-2 py-0.5 inline-block border border-brand-dark">{categories.find(c => c.id === product.category_id)?.name || 'Bilinmeyen'}</div>
-                          </div>
-                          
-                          <InlinePriceEdit product={product} onSave={handleInlinePriceUpdate} />
-
-                          <div className="flex gap-1 shrink-0 border-l-2 border-brand-dark pl-3">
-                            <button onClick={() => moveProduct(product, 'up')} disabled={siblingIndex === 0 || !!sortByPrice} className="w-7 h-7 flex items-center justify-center bg-brand-light border-2 border-brand-dark font-bold hover:bg-white disabled:opacity-30 text-sm" title={sortByPrice ? 'Fiyat sıralaması aktifken taşıma devre dışı' : 'Yukarı Taşı'}>▲</button>
-                            <button onClick={() => moveProduct(product, 'down')} disabled={siblingIndex === siblings.length - 1 || !!sortByPrice} className="w-7 h-7 flex items-center justify-center bg-brand-light border-2 border-brand-dark font-bold hover:bg-white disabled:opacity-30 text-sm" title={sortByPrice ? 'Fiyat sıralaması aktifken taşıma devre dışı' : 'Aşağı Taşı'}>▼</button>
-                          </div>
-                          <div className="flex flex-col gap-2 shrink-0 border-l-2 border-brand-dark pl-4">
-                            <button onClick={() => handleEditClick(product)} className="text-[#5b7a57] font-bold hover:scale-110 transition-transform" title="Düzenle">[✍️]</button>
-                            <button onClick={() => handleDeleteProduct(product.id)} className="text-red-600 font-bold hover:scale-110 transition-transform" title="Sil">[X]</button>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
+          <MenuTab
+            categoryName={categoryName} setCategoryName={setCategoryName}
+            handleCreateCategory={handleCreateCategory}
+            loading={loading}
+            fileInputRef={fileInputRef}
+            handleFileUpload={handleFileUpload}
+            sortedCategories={sortedCategories}
+            layoutStyle={layoutStyle}
+            categories={categories}
+            handleCanvasDragStop={handleCanvasDragStop}
+            sensors={sensors}
+            handleDragEndCategories={handleDragEndCategories}
+            SortableCategoryItem={SortableCategoryItem}
+            moveCategory={moveCategory}
+            editingProductId={editingProductId}
+            handleSubmitProduct={handleSubmitProduct}
+            selectedCategoryId={selectedCategoryId} setSelectedCategoryId={setSelectedCategoryId}
+            productName={productName} setProductName={setProductName}
+            productDesc={productDesc} setProductDesc={setProductDesc}
+            setImageFile={setImageFile}
+            productPrice={productPrice} setProductPrice={setProductPrice}
+            resetProductForm={resetProductForm}
+            searchTerm={searchTerm} setSearchTerm={setSearchTerm}
+            filterCategoryId={filterCategoryId} setFilterCategoryId={setFilterCategoryId}
+            sortByPrice={sortByPrice} setSortByPrice={setSortByPrice}
+            selectedProductIds={selectedProductIds}
+            bulkMode={bulkMode} setBulkMode={setBulkMode}
+            bulkValue={bulkValue} setBulkValue={setBulkValue}
+            bulkValueType={bulkValueType} setBulkValueType={setBulkValueType}
+            handleBulkDelete={handleBulkDelete}
+            handleApplyBulkAction={handleApplyBulkAction}
+            filteredProducts={filteredProducts}
+            toggleSelectAll={toggleSelectAll}
+            productsByCategoryId={productsByCategoryId}
+            toggleSelectProduct={toggleSelectProduct}
+            moveProduct={moveProduct}
+            handleEditClick={handleEditClick}
+            handleDeleteProduct={handleDeleteProduct}
+            handleInlinePriceUpdate={handleInlinePriceUpdate}
+          />
         )}
       </main>
 

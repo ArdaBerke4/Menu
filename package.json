@@ -19,7 +19,8 @@
     "react-dom": "^19.2.7",
     "react-draggable": "^4.7.0",
     "react-router-dom": "^7.18.1",
-    "react-zoom-pan-pinch": "^4.0.3"
+    "react-zoom-pan-pinch": "^4.0.3",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/node": "^24.13.2",

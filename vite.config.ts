@@ -7,12 +7,15 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          'vendor-supabase': ['@supabase/supabase-js'],
-          'vendor-dnd': ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities'],
-          'vendor-qr': ['qr-code-styling'],
-          'vendor-zoom': ['react-zoom-pan-pinch'],
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react')) return 'vendor-react';
+            if (id.includes('@supabase')) return 'vendor-supabase';
+            if (id.includes('@dnd-kit')) return 'vendor-dnd';
+            if (id.includes('qr-code-styling')) return 'vendor-qr';
+            if (id.includes('react-zoom-pan-pinch')) return 'vendor-zoom';
+            return 'vendor';
+          }
         }
       }
     }
