@@ -9,19 +9,22 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setErrorMsg(null);
 
     if (isRegister) {
       // Kayıt Olma İşlemi
       const { error } = await supabase.auth.signUp({ email, password });
-      if (error) alert("Kayıt hatası: " + error.message);
-      else alert("Kayıt başarılı! Şimdi giriş yapabilirsiniz.");
+      if (error) setErrorMsg("Kayıt hatası: " + error.message);
+      else setErrorMsg("Kayıt başarılı! Şimdi giriş yapabilirsiniz.");
     } else {
       // Giriş Yapma İşlemi
       const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) alert("Giriş hatası: " + error.message);
+      if (error) setErrorMsg("Giriş hatası: " + (error.message === 'Failed to fetch' ? 'Sunucuya ulaşılamıyor. (Supabase projeniz uykuya dalmış olabilir)' : error.message));
       else navigate('/admin'); // Başarılıysa doğrudan panele fırlat
     }
     setLoading(false);
@@ -33,6 +36,12 @@ export default function Auth() {
         <h2 className="text-3xl font-bold text-center text-brand-dark uppercase border-b-4 border-brand-dark pb-3 mb-6">
           {isRegister ? 'Yeni Hesap Oluştur' : 'Mekan Sahibi Girişi'}
         </h2>
+
+        {errorMsg && (
+          <div className="mb-4 p-3 bg-red-100 border-2 border-red-500 text-red-700 font-bold text-center animate-fade-in">
+            {errorMsg}
+          </div>
+        )}
 
         <form onSubmit={handleAuth} className="space-y-4">
           <div>

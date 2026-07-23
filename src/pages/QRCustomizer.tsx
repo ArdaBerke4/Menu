@@ -43,6 +43,45 @@ const DOWNLOAD_SIZES = [
   { size: 2048, label: '2048px', desc: 'HD Baskı / Tabela'  },
 ];
 
+function DebouncedColorInput({ value, onChange, onFocus, disabled = false, isTransparent = false }: any) {
+  const [local, setLocal] = useState(value);
+  const timerRef = useRef<any>(null);
+
+  useEffect(() => {
+    setLocal(value);
+  }, [value]);
+
+  const handleChange = (e: any) => {
+    const newVal = e.target.value;
+    setLocal(newVal);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      onChange(newVal);
+    }, 150);
+  };
+
+  return (
+    <div className="flex gap-3">
+      <input
+        type="color"
+        disabled={disabled}
+        onFocus={onFocus}
+        value={local}
+        onChange={handleChange}
+        className="w-14 h-12 border-2 border-brand-dark cursor-pointer bg-white p-1 disabled:opacity-50"
+      />
+      <input
+        type="text"
+        disabled={disabled}
+        onFocus={onFocus}
+        value={isTransparent ? 'Şeffaf' : local}
+        onChange={handleChange}
+        className="flex-1 px-3 py-2 border-2 border-brand-dark bg-white focus:outline-none font-bold disabled:opacity-50"
+      />
+    </div>
+  );
+}
+
 export default function QRCustomizer() {
   const { restaurantId } = useParams();
   const navigate = useNavigate();
@@ -299,43 +338,17 @@ export default function QRCustomizer() {
               <div className="grid grid-cols-2 gap-6">
                 <div>
                   <label className="block font-bold mb-2">QR Kodu Rengi</label>
-                  <div className="flex gap-3">
-                    <input
-                      type="color"
-                      onFocus={saveToHistory}
-                      value={dotColor}
-                      onChange={e => setDotColor(e.target.value)}
-                      className="w-14 h-12 border-2 border-brand-dark cursor-pointer bg-white p-1"
-                    />
-                    <input
-                      type="text"
-                      onFocus={saveToHistory}
-                      value={dotColor}
-                      onChange={e => setDotColor(e.target.value)}
-                      className="flex-1 px-3 py-2 border-2 border-brand-dark bg-white focus:outline-none font-bold"
-                    />
-                  </div>
+                  <DebouncedColorInput value={dotColor} onChange={setDotColor} onFocus={saveToHistory} />
                 </div>
                 <div>
                   <label className="block font-bold mb-2">Arka Plan Rengi</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="color"
-                      onFocus={saveToHistory}
-                      value={bgColor}
-                      onChange={e => { setBgColor(e.target.value); setTransparentBg(false); }}
-                      className="w-14 h-12 border-2 border-brand-dark cursor-pointer bg-white p-1"
-                      disabled={transparentBg}
-                    />
-                    <input
-                      type="text"
-                      onFocus={saveToHistory}
-                      value={transparentBg ? 'Şeffaf' : bgColor}
-                      onChange={e => { setBgColor(e.target.value); setTransparentBg(false); }}
-                      className="flex-1 px-3 py-2 border-2 border-brand-dark bg-white focus:outline-none font-bold"
-                      disabled={transparentBg}
-                    />
-                  </div>
+                  <DebouncedColorInput 
+                    value={bgColor} 
+                    onChange={(val: string) => { setBgColor(val); setTransparentBg(false); }} 
+                    onFocus={saveToHistory} 
+                    disabled={transparentBg} 
+                    isTransparent={transparentBg} 
+                  />
                   <button
                     onClick={() => { saveToHistory(); setTransparentBg(!transparentBg); }}
                     className={`mt-2 w-full py-2 border-2 border-brand-dark text-sm font-bold transition-colors ${transparentBg ? 'bg-brand text-surface' : 'bg-white text-brand-dark hover:bg-brand-light'}`}

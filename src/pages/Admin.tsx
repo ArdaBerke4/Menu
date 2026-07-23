@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '../supabase';
 import { useNavigate } from 'react-router-dom';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
@@ -139,6 +139,31 @@ function InlinePriceEdit({ product, onSave }: { product: Product, onSave: (id: s
         if (e.key === 'Escape') { setIsEditing(false); setVal(product.price.toString()); }
       }}
     />
+  );
+}
+
+function DebouncedColorInput({ value, onChange, onFocus, disabled = false }: any) {
+  const [local, setLocal] = useState(value);
+  const timerRef = useRef<any>(null);
+
+  useEffect(() => {
+    setLocal(value);
+  }, [value]);
+
+  const handleChange = (e: any) => {
+    const newVal = e.target.value;
+    setLocal(newVal);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      onChange(newVal);
+    }, 150);
+  };
+
+  return (
+    <div className="flex gap-4">
+      <input type="color" disabled={disabled} onFocus={onFocus} value={local} onChange={handleChange} className="w-16 h-12 border-2 border-brand-dark cursor-pointer bg-white p-1 disabled:opacity-50" />
+      <input type="text" disabled={disabled} onFocus={onFocus} value={local} onChange={handleChange} className="flex-1 px-4 py-2 border-2 border-brand-dark bg-white focus:outline-none disabled:opacity-50 font-bold" />
+    </div>
   );
 }
 
@@ -970,10 +995,7 @@ export default function Admin() {
 
                   <div>
                     <label className="block font-bold mb-2">Marka Vurgu Rengi</label>
-                    <div className="flex gap-4">
-                      <input type="color" onFocus={saveToHistory} value={themeColor} onChange={(e) => setThemeColor(e.target.value)} className="w-16 h-12 border-2 border-brand-dark cursor-pointer bg-white p-1" />
-                      <input type="text" onFocus={saveToHistory} value={themeColor} onChange={(e) => setThemeColor(e.target.value)} className="flex-1 px-4 py-2 border-2 border-brand-dark bg-white focus:outline-none" />
-                    </div>
+                    <DebouncedColorInput value={themeColor} onChange={setThemeColor} onFocus={saveToHistory} />
                   </div>
 
                   <div>
@@ -1086,10 +1108,7 @@ export default function Admin() {
 
                   <div>
                     <label className="block font-bold mb-2">Arka Plan Rengi</label>
-                    <div className="flex gap-4">
-                      <input type="color" onFocus={saveToHistory} value={bgColor} onChange={(e) => setBgColor(e.target.value)} className="w-16 h-12 border-2 border-brand-dark cursor-pointer bg-white p-1" />
-                      <input type="text" onFocus={saveToHistory} value={bgColor} onChange={(e) => setBgColor(e.target.value)} className="flex-1 px-4 py-2 border-2 border-brand-dark bg-white focus:outline-none" />
-                    </div>
+                    <DebouncedColorInput value={bgColor} onChange={setBgColor} onFocus={saveToHistory} />
                   </div>
 
                   {/* STANDART BUTON */}
