@@ -25,11 +25,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   cancelled:  { label: 'İptal',        color: 'bg-red-100 text-red-800 border-red-300' },
 };
 
-const NEXT_STATUS: Record<string, string> = {
-  pending: 'preparing',
-  preparing: 'ready',
-  ready: 'delivered',
-};
+// No longer need NEXT_STATUS for direct delivery
 
 export function TableDetailModal({
   table, orders, orderItems, categories: _categories, products: _products, restaurant, restaurantAddress, menuUrl, onClose, showToast
@@ -44,14 +40,15 @@ export function TableDetailModal({
     .reduce((sum, i) => sum + i.unit_price * i.quantity, 0);
 
   const handleItemStatusChange = async (item: OrderItem) => {
-    const next = NEXT_STATUS[item.status];
-    if (!next) return;
-    const { error } = await supabase.from('order_items').update({ status: next }).eq('id', item.id);
+    const { error } = await supabase.from('order_items').update({ status: 'delivered' }).eq('id', item.id);
     if (error) showToast('Durum güncellenemedi: ' + error.message, 'error');
   };
 
-  // Sipariş seviyesinde durum değiştirme (gelecekte garson görünümü için)
-  // const handleOrderStatusChange = async (order: Order, newStatus: string) => { ... };
+  const handleResolveWaiter = async () => {
+    const { error } = await supabase.from('tables').update({ needs_waiter: false }).eq('id', table.id);
+    if (error) showToast('Garson çağrısı kapatılamadı: ' + error.message, 'error');
+    else showToast('Garson çağrısı kapatıldı.');
+  };
 
   const handleMarkPaid = async () => {
     for (const order of tableOrders) {
@@ -120,10 +117,26 @@ export function TableDetailModal({
                 {table.capacity} kişilik · {tableOrders.length} aktif sipariş
               </p>
             </div>
-            <button onClick={onClose} className="w-10 h-10 border-2 border-brand-dark bg-white flex items-center justify-center font-bold text-xl hover:bg-gray-100">
-              ✕
+            <button onClick={onClose} className="p-2 hover:bg-black/5 active:scale-95 transition-all" title="Kapat (ESC)">
+              <span className="text-3xl font-bold text-brand-dark">✕</span>
             </button>
           </div>
+
+          {/* Garson Çağrısı Banner */}
+          {table.needs_waiter && (
+            <div className="mt-4 bg-red-100 border-2 border-red-500 p-3 flex items-center justify-between animate-pulse">
+              <div className="flex items-center gap-2 text-red-700 font-bold">
+                <span className="text-xl">🔔</span>
+                <span>Bu masa garson çağırdı!</span>
+              </div>
+              <button 
+                onClick={handleResolveWaiter}
+                className="bg-red-500 text-white px-3 py-1 text-sm font-bold border-2 border-red-700 hover:bg-red-600 active:scale-95 transition-all"
+              >
+                İlgilenildi (Kapat)
+              </button>
+            </div>
+          )}
 
           {/* Tab seçici */}
           <div className="flex gap-2 mt-4">
@@ -175,8 +188,7 @@ export function TableDetailModal({
                         {/* Sipariş kalemleri */}
                         <div className="divide-y divide-brand-dark/10">
                           {items.map(item => {
-                            const itemStatus = STATUS_LABELS[item.status] || STATUS_LABELS.pending;
-                            const canAdvance = NEXT_STATUS[item.status];
+                            const canAdvance = item.status !== 'delivered' && item.status !== 'cancelled';
                             return (
                               <div key={item.id} className="flex items-center gap-3 px-4 py-3">
                                 <div className="flex-1 min-w-0">
@@ -191,10 +203,10 @@ export function TableDetailModal({
                                 {canAdvance && (
                                   <button
                                     onClick={() => handleItemStatusChange(item)}
-                                    className={`text-xs font-bold px-2 py-1 border transition-colors hover:scale-105 ${itemStatus.color}`}
-                                    title={`${STATUS_LABELS[NEXT_STATUS[item.status]]?.label || ''} olarak işaretle`}
+                                    className={`text-xs font-bold px-3 py-1.5 border-2 transition-colors hover:scale-105 bg-green-100 text-green-700 border-green-500`}
+                                    title={`Teslim Edildi olarak işaretle`}
                                   >
-                                    {item.status === 'pending' ? '🔥' : item.status === 'preparing' ? '✓' : '🏁'}
+                                    ✓
                                   </button>
                                 )}
                               </div>

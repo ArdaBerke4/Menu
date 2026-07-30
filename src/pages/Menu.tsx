@@ -54,6 +54,8 @@ const T: Record<LangCode, {
   emptyCart: string;
   sendOrder: string;
   orderSuccess: string;
+  callWaiter: string;
+  waiterCalled: string;
 }> = {
   tr: {
     subtitle: '~ Dijital Menü ~',
@@ -67,6 +69,7 @@ const T: Record<LangCode, {
     mapsLink: 'Haritada Göster ↗',
     cart: 'Sepetim', total: 'Toplam', emptyCart: 'Sepetiniz boş.',
     sendOrder: 'Siparişi Gönder', orderSuccess: 'Siparişiniz alındı! ✓',
+    callWaiter: 'Garson Çağır', waiterCalled: 'Garson Çağrıldı! 🔔',
   },
   en: {
     subtitle: '~ Digital Menu ~',
@@ -80,6 +83,7 @@ const T: Record<LangCode, {
     mapsLink: 'View on Maps ↗',
     cart: 'My Cart', total: 'Total', emptyCart: 'Your cart is empty.',
     sendOrder: 'Send Order', orderSuccess: 'Order received! ✓',
+    callWaiter: 'Call Waiter', waiterCalled: 'Waiter Called! 🔔',
   },
   de: {
     subtitle: '~ Digitale Speisekarte ~',
@@ -93,6 +97,7 @@ const T: Record<LangCode, {
     mapsLink: 'Auf Karte anzeigen ↗',
     cart: 'Warenkorb', total: 'Gesamt', emptyCart: 'Warenkorb ist leer.',
     sendOrder: 'Bestellung Senden', orderSuccess: 'Bestellung erhalten! ✓',
+    callWaiter: 'Kellner Rufen', waiterCalled: 'Kellner Gerufen! 🔔',
   },
   ar: {
     subtitle: '~ القائمة الرقمية ~',
@@ -106,6 +111,7 @@ const T: Record<LangCode, {
     mapsLink: '↗ عرض على الخريطة',
     cart: 'عربة التسوق', total: 'المجموع', emptyCart: 'عربة التسوق فارغة.',
     sendOrder: 'إرسال الطلب', orderSuccess: 'تم استلام الطلب! ✓',
+    callWaiter: 'استدعاء النادل', waiterCalled: 'تم استدعاء النادل! 🔔',
   },
   ru: {
     subtitle: '~ Цифровое Меню ~',
@@ -119,6 +125,7 @@ const T: Record<LangCode, {
     mapsLink: 'Показать на карте ↗',
     cart: 'Корзина', total: 'Итого', emptyCart: 'Ваша корзина пуста.',
     sendOrder: 'Отправить Заказ', orderSuccess: 'Заказ принят! ✓',
+    callWaiter: 'Позвать Официанта', waiterCalled: 'Официант Вызван! 🔔',
   },
   fr: {
     subtitle: '~ Menu Numérique ~',
@@ -132,6 +139,7 @@ const T: Record<LangCode, {
     mapsLink: 'Voir sur Maps ↗',
     cart: 'Mon Panier', total: 'Total', emptyCart: 'Votre panier est vide.',
     sendOrder: 'Envoyer la Commande', orderSuccess: 'Commande reçue! ✓',
+    callWaiter: 'Appeler le Serveur', waiterCalled: 'Serveur Appelé! 🔔',
   },
 };
 
@@ -156,6 +164,9 @@ const getFontSizeClasses = (size?: string) => {
 
 export default function Menu() {
   const { slug } = useParams();
+  const [toast, setToast] = useState<string | null>(null);
+  const [isCallingWaiter, setIsCallingWaiter] = useState(false);
+  const [hasCalledWaiter, setHasCalledWaiter] = useState(false);
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -255,6 +266,22 @@ export default function Menu() {
       }
       return item;
     }).filter(Boolean) as CartItem[]);
+  };
+
+  const handleCallWaiter = async () => {
+    if (!tableId || hasCalledWaiter) return;
+    setIsCallingWaiter(true);
+    const { error } = await supabase.from('tables').update({ needs_waiter: true }).eq('id', tableId);
+    if (!error) {
+      setHasCalledWaiter(true);
+      setToast(t.waiterCalled);
+      setTimeout(() => setToast(null), 3000);
+      setTimeout(() => setHasCalledWaiter(false), 30000); // 30 sn cooldown
+    } else {
+      setToast('Hata: Garson çağrılamadı');
+      setTimeout(() => setToast(null), 3000);
+    }
+    setIsCallingWaiter(false);
   };
 
   const cartTotalItems = cart.reduce((acc, item) => acc + item.quantity, 0);
@@ -826,6 +853,19 @@ export default function Menu() {
         </button>
       </div>
 
+      {/* GARSON ÇAĞIR BUTONU */}
+      {tableId && (
+        <button
+          onClick={handleCallWaiter}
+          disabled={isCallingWaiter || hasCalledWaiter}
+          className="fixed bottom-24 left-6 z-50 flex items-center justify-center w-14 h-14 rounded-full border-4 shadow-pixel font-bold text-2xl hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:grayscale"
+          style={{ backgroundColor: hasCalledWaiter ? '#a3c79e' : '#F4E4C1', borderColor: themeColor, color: themeColor }}
+          title={t.callWaiter}
+        >
+          🔔
+        </button>
+      )}
+
       {/* SEPET BUTONU */}
       {cartTotalItems > 0 && (
         <button
@@ -913,6 +953,13 @@ export default function Menu() {
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* TOAST BİLDİRİMİ */}
+      {toast && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] bg-brand-dark text-white px-6 py-3 rounded-full shadow-2xl font-bold border-2 border-white animate-bounce">
+          {toast}
         </div>
       )}
 

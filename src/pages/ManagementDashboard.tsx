@@ -4,6 +4,7 @@ import { supabase } from '../supabase';
 import { useRealtimeOrders } from '../hooks/useRealtimeOrders';
 import { TableCard } from '../components/pos/TableCard';
 import { TableDetailModal } from '../components/pos/TableDetailModal';
+import { PriorityOrdersModal } from '../components/pos/PriorityOrdersModal';
 import type { Table } from '../types/pos';
 import type { Category, Product } from '../types/admin';
 
@@ -17,6 +18,7 @@ export default function ManagementDashboard() {
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
   const [showAddTable, setShowAddTable] = useState(false);
   const [newTableCount, setNewTableCount] = useState('1');
+  const [showPriorityOrders, setShowPriorityOrders] = useState(false);
   const [addLoading, setAddLoading] = useState(false);
   const [restaurant, setRestaurant] = useState<any>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -49,8 +51,7 @@ export default function ManagementDashboard() {
   }, [restaurantId]);
 
   // Toplu masa ekle
-  const handleAddTable = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleAddTables = async () => {
     if (!restaurantId) return;
     setAddLoading(true);
 
@@ -60,21 +61,15 @@ export default function ManagementDashboard() {
       setAddLoading(false);
       return;
     }
-
-    // Mevcut en yüksek masa numarasını bul (eğer 1'den başlatmak istiyorsak, mevcutları kontrol etmek iyi olur)
-    // Ama kullanıcı "1'den 39'a kadar oluştursun" dedi. Hata almamak için bulk insert (upsert veya ignore duplicate) kullanabiliriz.
-    // Supabase JS insert, eğer array verilirse bulk insert yapar.
     
-    // Zaten var olan masa numaralarını al
     const existingNumbers = new Set(tables.map(t => t.table_number));
-    
     const tablesToInsert = [];
     for (let i = 1; i <= count; i++) {
       if (!existingNumbers.has(i)) {
         tablesToInsert.push({
           restaurant_id: restaurantId,
           table_number: i,
-          capacity: 4 // Varsayılan kapasite
+          capacity: 4
         });
       }
     }
@@ -97,15 +92,16 @@ export default function ManagementDashboard() {
     setAddLoading(false);
   };
 
-  // Masa sil (ileride masa kartına uzun basma/sağ tık menüsü eklenecek)
-  // const handleDeleteTable = async (tableId: string) => { ... };
-
   // İstatistikler
   const occupiedCount = tables.filter(t => {
     const hasOrders = orders.some(o => o.table_id === t.id);
     return hasOrders || t.status === 'occupied';
   }).length;
-  const pendingOrders = orders.filter(o => o.status === 'pending').length;
+  const pendingItems = orderItems.filter(i => 
+    i.status === 'pending' && orders.some(o => o.id === i.order_id)
+  );
+  const pendingOrders = pendingItems.length;
+  
   const totalRevenue = orders.reduce((sum, o) => {
     const items = orderItems.filter(i => i.order_id === o.id && i.status !== 'cancelled');
     return sum + items.reduce((s, i) => s + i.unit_price * i.quantity, 0);
@@ -140,6 +136,17 @@ export default function ManagementDashboard() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowPriorityOrders(true)}
+              className="relative px-5 py-2 bg-yellow-100 text-yellow-800 border-2 border-yellow-500 font-bold hover:bg-yellow-200 shadow-pixel-sm transition-all active:translate-y-0.5"
+            >
+              Öncelikli Siparişler
+              {pendingOrders > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full border border-black animate-bounce">
+                  {pendingOrders}
+                </span>
+              )}
+            </button>
             <button
               onClick={() => setShowAddTable(true)}
               className="px-5 py-2 bg-[#8fb38a] text-brand-dark border-2 border-brand-dark font-bold hover:bg-[#a3c79e] shadow-pixel-sm transition-all active:translate-y-0.5"
@@ -216,42 +223,52 @@ export default function ManagementDashboard() {
 
       {/* MASA EKLEME MODAL */}
       {showAddTable && (
-        <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center backdrop-blur-sm" onClick={() => setShowAddTable(false)}>
-          <div className="bg-surface border-4 border-brand-dark shadow-pixel p-8 w-full max-w-md" onClick={e => e.stopPropagation()}>
-            <h2 className="text-2xl font-bold text-brand-dark uppercase mb-6 border-b-2 border-brand-dark pb-3">
-              Yeni Masa Ekle
-            </h2>
-            <form onSubmit={handleAddTable} className="space-y-4">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-surface border-4 border-brand-dark p-6 w-full max-w-sm shadow-2xl">
+            <h2 className="text-xl font-bold text-brand-dark mb-4">Toplu Masa Oluştur</h2>
+            <div className="space-y-4">
               <div>
-                <label className="block font-bold mb-1 text-brand-dark">Kaç Masa Oluşturulacak?</label>
-                <p className="text-sm text-brand-dark/60 mb-2">1'den başlayarak yazdığınız sayıya kadar olan masalar otomatik eklenecektir. (Zaten var olanlar atlanır)</p>
+                <label className="block text-sm font-bold text-brand-dark/70 mb-1">Kaç Masa Oluşturulacak?</label>
                 <input
-                  type="number" min="1" max="200" required
+                  type="number"
+                  min="1"
+                  max="100"
                   value={newTableCount}
                   onChange={e => setNewTableCount(e.target.value)}
-                  placeholder="Örn: 39"
-                  className="w-full px-4 py-3 border-2 border-brand-dark bg-white focus:outline-none text-lg"
+                  className="w-full px-3 py-2 border-2 border-brand-dark bg-white font-bold text-lg"
+                  autoFocus
                 />
               </div>
-              <div className="flex gap-3 pt-2">
+              <div className="flex gap-3">
                 <button
-                  type="submit"
-                  disabled={addLoading}
-                  className="flex-1 py-3 bg-[#8fb38a] text-brand-dark border-2 border-brand-dark font-bold hover:bg-[#a3c79e] shadow-pixel-sm disabled:opacity-50"
-                >
-                  {addLoading ? 'Ekleniyor...' : 'Ekle'}
-                </button>
-                <button
-                  type="button"
                   onClick={() => setShowAddTable(false)}
-                  className="px-6 py-3 bg-gray-200 text-brand-dark border-2 border-brand-dark font-bold hover:bg-gray-300"
+                  className="flex-1 px-4 py-2 border-2 border-brand-dark font-bold hover:bg-black/5 transition-colors"
+                  disabled={addLoading}
                 >
                   İptal
                 </button>
+                <button
+                  onClick={handleAddTables}
+                  disabled={addLoading}
+                  className="flex-1 px-4 py-2 bg-brand-dark text-white font-bold border-2 border-brand-dark hover:bg-black transition-colors disabled:opacity-50"
+                >
+                  {addLoading ? 'Ekleniyor...' : 'Ekle'}
+                </button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
+      )}
+
+      {/* Öncelikli Siparişler Modalı */}
+      {showPriorityOrders && (
+        <PriorityOrdersModal
+          orders={orders}
+          orderItems={orderItems}
+          tables={tables}
+          onClose={() => setShowPriorityOrders(false)}
+          showToast={showToast}
+        />
       )}
 
       {/* TOAST */}

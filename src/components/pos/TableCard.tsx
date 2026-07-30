@@ -11,9 +11,9 @@ export function TableCard({ table, orders, orderItems, onClick }: TableCardProps
   const tableOrders = orders.filter(o => o.table_id === table.id);
   const hasActiveOrders = tableOrders.length > 0;
 
-  const pendingCount = tableOrders.filter(o => o.status === 'pending').length;
-  const preparingCount = tableOrders.filter(o => o.status === 'preparing').length;
-  const readyCount = tableOrders.filter(o => o.status === 'ready').length;
+  const pendingCount = orderItems.filter(i => 
+    i.status === 'pending' && tableOrders.some(o => o.id === i.order_id)
+  ).length;
 
   const totalAmount = tableOrders.reduce((sum, o) => {
     const items = orderItems.filter(i => i.order_id === o.id);
@@ -28,12 +28,23 @@ export function TableCard({ table, orders, orderItems, onClick }: TableCardProps
 
   const effectiveStatus = hasActiveOrders ? 'occupied' : table.status;
   const config = statusConfig[effectiveStatus] || statusConfig.empty;
+  const isCallingWaiter = table.needs_waiter;
+
+  const finalBg = isCallingWaiter ? 'bg-red-50' : config.bg;
+  const finalBorder = isCallingWaiter ? 'border-red-500 animate-pulse' : config.border;
 
   return (
     <button
       onClick={() => onClick(table)}
-      className={`${config.bg} border-4 ${config.border} p-5 flex flex-col items-center gap-3 transition-all hover:-translate-y-1 hover:shadow-lg active:translate-y-0 cursor-pointer text-left w-full relative`}
+      className={`${finalBg} border-4 ${finalBorder} p-5 flex flex-col items-center gap-3 transition-all hover:-translate-y-1 hover:shadow-lg active:translate-y-0 cursor-pointer text-left w-full relative`}
     >
+      {/* Garson Uyarı Etiketi */}
+      {isCallingWaiter && (
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 whitespace-nowrap border-2 border-black z-10 animate-bounce">
+          🔔 GARSON ÇAĞRILDI
+        </div>
+      )}
+
       {/* Durum noktası */}
       <div className={`absolute top-3 right-3 w-3 h-3 rounded-full ${config.dot} ${hasActiveOrders ? 'animate-pulse' : ''}`} />
 
@@ -58,16 +69,6 @@ export function TableCard({ table, orders, orderItems, onClick }: TableCardProps
             {pendingCount > 0 && (
               <span className="text-xs font-bold bg-yellow-200 text-yellow-800 px-2 py-0.5 border border-yellow-400">
                 {pendingCount} bekliyor
-              </span>
-            )}
-            {preparingCount > 0 && (
-              <span className="text-xs font-bold bg-orange-200 text-orange-800 px-2 py-0.5 border border-orange-400">
-                {preparingCount} hazırlanıyor
-              </span>
-            )}
-            {readyCount > 0 && (
-              <span className="text-xs font-bold bg-green-200 text-green-800 px-2 py-0.5 border border-green-400">
-                {readyCount} hazır
               </span>
             )}
           </div>

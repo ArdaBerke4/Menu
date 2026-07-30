@@ -5,6 +5,7 @@ export interface Table {
   label?: string;
   capacity: number;
   status: 'empty' | 'occupied' | 'reserved';
+  needs_waiter?: boolean;
   created_at?: string;
 }
 

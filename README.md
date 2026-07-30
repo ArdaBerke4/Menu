@@ -1,32 +1,42 @@
-# React + TypeScript + Vite
+# QR Menü ve POS Sistemi
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Bu proje; QR kod tabanlı, gerçek zamanlı sipariş ve masa yönetimi yapılabilen bir restoran POS sistemidir. React, Vite ve Supabase kullanılarak geliştirilmiştir.
 
-Currently, two official plugins are available:
+## 🚀 Projeyi Bilgisayarınızda Çalıştırma Adımları
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Eğer projeyi Github'dan indirdiyseniz (veya clone'ladıysanız), çalıştırmak için aşağıdaki adımları sırasıyla uygulamanız gerekmektedir.
 
-## React Compiler
+### 1. Gereksinimler
+Bilgisayarınızda **Node.js**'in (tercihen v18 veya üstü) yüklü olması gerekmektedir. Yüklü değilse [nodejs.org](https://nodejs.org) adresinden indirip kurabilirsiniz.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+### 2. Proje Dosyalarının Kurulumu
+Projeyi indirdiğiniz klasörü terminalde (veya Komut İstemcisi/VS Code terminalinde) açın ve gerekli kütüphaneleri indirmek için şu komutu çalıştırın:
+```bash
+npm install
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+### 3. Çevre Değişkenleri (.env) - ÇOK ÖNEMLİ!
+Güvenlik sebebiyle veritabanı şifreleri ve linkleri Github'a yüklenmez. Bu yüzden projeyi çalıştırdığınızda veritabanına (Supabase) bağlanamazsınız. Bağlanabilmek için:
+
+1. Proje ana klasöründe `.env` adında yeni bir dosya oluşturun. (Veya var olan `.env.example` dosyasının adını `.env` olarak değiştirin).
+2. İçerisine Supabase URL'nizi ve Anon Key'inizi şu formatta yapıştırın:
+```env
+VITE_SUPABASE_URL=buraya_kendi_url_adresiniz_gelecek
+VITE_SUPABASE_ANON_KEY=buraya_kendi_anon_key_adresiniz_gelecek
+```
+*(Eğer bu şifrelere sahip değilseniz, lütfen proje geliştiricisinden `.env` dosyasını size doğrudan göndermesini isteyin.)*
+
+### 4. Projeyi Başlatma
+Kütüphaneler yüklendikten ve `.env` dosyası eklendikten sonra projeyi ayağa kaldırmak için şu komutu çalıştırın:
+```bash
+npm run dev
+```
+
+Terminalde size **`http://localhost:5173`** gibi bir link verecektir. O linke tıklayarak veya tarayıcınıza yapıştırarak sisteme giriş yapabilirsiniz!
+
+---
+
+## 🛠 Kullanılan Teknolojiler
+- **Frontend:** React, TypeScript, Tailwind CSS, Vite
+- **Backend / Veritabanı:** Supabase (PostgreSQL, Auth, Realtime)
+- **Ekstralar:** `qr-code-styling` (Gelişmiş QR Kod tasarımı için), `@hello-pangea/dnd` (Kategori sürükle-bırak işlemleri için)
