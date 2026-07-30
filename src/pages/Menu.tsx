@@ -52,6 +52,8 @@ const T: Record<LangCode, {
   cart: string;
   total: string;
   emptyCart: string;
+  sendOrder: string;
+  orderSuccess: string;
 }> = {
   tr: {
     subtitle: '~ Dijital Menü ~',
@@ -64,6 +66,7 @@ const T: Record<LangCode, {
     developer: 'Geliştirici: Arda Berke Aday',
     mapsLink: 'Haritada Göster ↗',
     cart: 'Sepetim', total: 'Toplam', emptyCart: 'Sepetiniz boş.',
+    sendOrder: 'Siparişi Gönder', orderSuccess: 'Siparişiniz alındı! ✓',
   },
   en: {
     subtitle: '~ Digital Menu ~',
@@ -76,6 +79,7 @@ const T: Record<LangCode, {
     developer: 'Developer: Arda Berke Aday',
     mapsLink: 'View on Maps ↗',
     cart: 'My Cart', total: 'Total', emptyCart: 'Your cart is empty.',
+    sendOrder: 'Send Order', orderSuccess: 'Order received! ✓',
   },
   de: {
     subtitle: '~ Digitale Speisekarte ~',
@@ -88,6 +92,7 @@ const T: Record<LangCode, {
     developer: 'Entwickler: Arda Berke Aday',
     mapsLink: 'Auf Karte anzeigen ↗',
     cart: 'Warenkorb', total: 'Gesamt', emptyCart: 'Warenkorb ist leer.',
+    sendOrder: 'Bestellung Senden', orderSuccess: 'Bestellung erhalten! ✓',
   },
   ar: {
     subtitle: '~ القائمة الرقمية ~',
@@ -100,6 +105,7 @@ const T: Record<LangCode, {
     developer: 'المطوّر: Arda Berke Aday',
     mapsLink: '↗ عرض على الخريطة',
     cart: 'عربة التسوق', total: 'المجموع', emptyCart: 'عربة التسوق فارغة.',
+    sendOrder: 'إرسال الطلب', orderSuccess: 'تم استلام الطلب! ✓',
   },
   ru: {
     subtitle: '~ Цифровое Меню ~',
@@ -112,6 +118,7 @@ const T: Record<LangCode, {
     developer: 'Разработчик: Arda Berke Aday',
     mapsLink: 'Показать на карте ↗',
     cart: 'Корзина', total: 'Итого', emptyCart: 'Ваша корзина пуста.',
+    sendOrder: 'Отправить Заказ', orderSuccess: 'Заказ принят! ✓',
   },
   fr: {
     subtitle: '~ Menu Numérique ~',
@@ -124,6 +131,7 @@ const T: Record<LangCode, {
     developer: 'Développeur: Arda Berke Aday',
     mapsLink: 'Voir sur Maps ↗',
     cart: 'Mon Panier', total: 'Total', emptyCart: 'Votre panier est vide.',
+    sendOrder: 'Envoyer la Commande', orderSuccess: 'Commande reçue! ✓',
   },
 };
 
@@ -147,7 +155,7 @@ const getFontSizeClasses = (size?: string) => {
 };
 
 export default function Menu() {
-  const { id } = useParams();
+  const { slug } = useParams();
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -256,6 +264,63 @@ export default function Menu() {
     return acc + (effectivePrice * item.quantity);
   }, 0);
 
+  // MASADAN SİPARİŞ (POS) STATE'LERİ
+  const [tableId, setTableId] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [orderSuccess, setOrderSuccess] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const table = params.get('table');
+    if (table) setTableId(table);
+  }, []);
+
+  const submitOrder = async () => {
+    if (!tableId || !restaurant || cart.length === 0) return;
+    setIsSubmitting(true);
+    
+    try {
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          restaurant_id: restaurant.id,
+          table_id: tableId,
+          total_amount: cartTotalPrice
+        })
+        .select()
+        .single();
+        
+      if (orderError) throw orderError;
+      
+      const itemsToInsert = cart.map(item => {
+        const priceInfo = getDiscountedPrice(item.product);
+        const effectivePrice = priceInfo.discounted ?? priceInfo.original;
+        return {
+          order_id: order.id,
+          product_id: item.product.id,
+          product_name: item.product.name,
+          quantity: item.quantity,
+          unit_price: effectivePrice
+        };
+      });
+      
+      const { error: itemsError } = await supabase.from('order_items').insert(itemsToInsert);
+      if (itemsError) throw itemsError;
+      
+      setCart([]);
+      setOrderSuccess(true);
+      setTimeout(() => {
+        setOrderSuccess(false);
+        setCartOpen(false);
+      }, 3000);
+    } catch (err) {
+      console.error('Sipariş hatası:', err);
+      alert('Sipariş gönderilirken bir hata oluştu.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // DİL STATE'İ
   const [lang, setLang] = useState<LangCode>(detectLang);
   const [langOpen, setLangOpen] = useState(false);
@@ -357,8 +422,8 @@ export default function Menu() {
 
   useEffect(() => {
     const fetchMenu = async () => {
-      if (!id) return;
-      const { data: restData } = await supabase.from('restaurants').select('*').eq('id', id).single();
+      if (!slug) return;
+      const { data: restData } = await supabase.from('restaurants').select('*').eq('slug', slug).single();
       if (restData) {
         setRestaurant(restData);
         const { data: catData } = await supabase.from('categories').select('*').eq('restaurant_id', restData.id);
@@ -375,7 +440,7 @@ export default function Menu() {
       setLoading(false);
     };
     fetchMenu();
-  }, [id]);
+  }, [slug]);
 
   const t = T[lang];
   const isRTL = LANGUAGES[lang].rtl ?? false;
@@ -813,13 +878,39 @@ export default function Menu() {
                 <span>{t.total}:</span>
                 <span>{cartTotalPrice} ₺</span>
               </div>
-              <button 
-                onClick={() => setCartOpen(false)}
-                className="w-full py-3 text-xl font-bold border-2 transition-all active:scale-95 text-white"
-                style={{ backgroundColor: themeColor, borderColor: themeColor, borderRadius: borderRadiusValue }}
-              >
-                Kapat
-              </button>
+              {orderSuccess && (
+                <div className="mb-4 text-center p-3 bg-green-100 text-green-800 border-2 border-green-400 font-bold uppercase rounded">
+                  {t.orderSuccess}
+                </div>
+              )}
+              
+              {tableId ? (
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => setCartOpen(false)}
+                    className="w-1/3 py-3 text-xl font-bold border-2 transition-all active:scale-95 text-white"
+                    style={{ backgroundColor: '#9ca3af', borderColor: '#9ca3af', borderRadius: borderRadiusValue }}
+                  >
+                    Kapat
+                  </button>
+                  <button 
+                    onClick={submitOrder}
+                    disabled={isSubmitting || cart.length === 0}
+                    className="w-2/3 py-3 text-xl font-bold border-2 transition-all active:scale-95 text-white disabled:opacity-50"
+                    style={{ backgroundColor: themeColor, borderColor: themeColor, borderRadius: borderRadiusValue }}
+                  >
+                    {isSubmitting ? t.loading : t.sendOrder}
+                  </button>
+                </div>
+              ) : (
+                <button 
+                  onClick={() => setCartOpen(false)}
+                  className="w-full py-3 text-xl font-bold border-2 transition-all active:scale-95 text-white"
+                  style={{ backgroundColor: themeColor, borderColor: themeColor, borderRadius: borderRadiusValue }}
+                >
+                  Kapat
+                </button>
+              )}
             </div>
           </div>
         </div>

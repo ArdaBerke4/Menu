@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { slugify } from '../utils/slugify';
 import * as XLSX from 'xlsx';
 import { supabase } from '../supabase';
 import { useNavigate } from 'react-router-dom';
@@ -150,8 +151,21 @@ export default function Admin() {
     e.preventDefault(); setLoading(true);
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
-    const { data, error } = await supabase.from('restaurants').insert([{ name: newRestaurantName, user_id: session.user.id }]).select().single();
-    if (!error && data) { setMyRestaurants([...myRestaurants, data]); setNewRestaurantName(''); showToast("Yeni restoran eklendi!"); }
+    
+    const slug = slugify(newRestaurantName);
+    const { data, error } = await supabase.from('restaurants').insert([{ name: newRestaurantName, user_id: session.user.id, slug }]).select().single();
+    
+    if (error) {
+      if (error.code === '23505') {
+        showToast("Bu isimde bir restoran zaten var. Lütfen (Kadıköy, Avcılar gibi) şube adı ekleyerek benzersiz bir isim belirleyin.", "error");
+      } else {
+        showToast("Restoran oluşturulamadı: " + error.message, "error");
+      }
+    } else if (data) {
+      setMyRestaurants([...myRestaurants, data]);
+      setNewRestaurantName('');
+      showToast("Yeni restoran eklendi!");
+    }
     setLoading(false);
   };
 
@@ -534,7 +548,7 @@ export default function Admin() {
   };
 
   const handleLogout = async () => { await supabase.auth.signOut(); navigate('/auth'); };
-  const menuLink = selectedRestaurant ? `${window.location.origin}/menu/${selectedRestaurant.id}` : '';
+  const menuLink = selectedRestaurant ? `${window.location.origin}/menu/${selectedRestaurant.slug || selectedRestaurant.id}` : '';
 
   // KAMPANYA CRUD (Moved to CampaignsTab.tsx)
 
@@ -750,16 +764,28 @@ export default function Admin() {
             <button onClick={() => setActiveTab('about')} className={`text-left px-4 py-3 border-2 border-brand-dark transition-all ${activeTab === 'about' ? 'bg-brand text-surface shadow-pixel' : 'bg-brand-light text-brand-dark hover:bg-white'}`}>Restoran Hakkında</button>
             <button onClick={() => setActiveTab('settings')} className={`text-left px-4 py-3 border-2 border-brand-dark transition-all ${activeTab === 'settings' ? 'bg-brand text-surface shadow-pixel' : 'bg-brand-light text-brand-dark hover:bg-white'}`}>Görünüm Ayarları</button>
           </nav>
-          <div className="mt-auto pt-6 border-t-4 border-brand-dark text-center">
-            <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(menuLink)}`} alt="QR" loading="lazy" className="w-32 h-32 mx-auto mb-3 image-pixelated" />
-            <button onClick={() => window.open(menuLink, '_blank')} className="w-full px-2 py-2 bg-[#8fb38a] border-2 border-brand-dark font-bold uppercase text-sm hover:bg-[#a3c79e] active:translate-y-1 shadow-pixel-sm">Menüyü Gör ↗</button>
+          <div className="mt-auto pt-6 border-t-4 border-brand-dark space-y-2">
             {selectedRestaurant && (
-              <button
-                onClick={() => navigate(`/qr/${selectedRestaurant.id}`)}
-                className="w-full mt-2 px-2 py-2 bg-brand text-surface border-2 border-brand-dark font-bold uppercase text-sm hover:opacity-90 active:translate-y-1 shadow-pixel-sm"
-              >
-                QR Özelleştir ✦
-              </button>
+              <>
+                <button
+                  onClick={() => window.open(`/pos/${selectedRestaurant.id}`, '_blank')}
+                  className="w-full px-2 py-3 bg-brand text-surface border-2 border-brand-dark font-bold uppercase text-sm hover:opacity-90 active:translate-y-1 shadow-pixel-sm"
+                >
+                  🏪 Masa & Sipariş Yönetimi
+                </button>
+                <button
+                  onClick={() => navigate(`/qr/${selectedRestaurant.id}`)}
+                  className="w-full px-2 py-2 bg-brand-light text-brand-dark border-2 border-brand-dark font-bold uppercase text-sm hover:bg-white active:translate-y-1 shadow-pixel-sm"
+                >
+                  QR Özelleştir ✦
+                </button>
+                <button
+                  onClick={() => window.open(menuLink, '_blank')}
+                  className="w-full px-2 py-2 bg-[#8fb38a] border-2 border-brand-dark font-bold uppercase text-sm hover:bg-[#a3c79e] active:translate-y-1 shadow-pixel-sm"
+                >
+                  Menüyü Gör ↗
+                </button>
+              </>
             )}
           </div>
         </div>

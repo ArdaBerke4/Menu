@@ -10,6 +10,12 @@ interface Restaurant {
   primary_color?: string;
   background_color?: string;
   logo_url?: string;
+  qr_dot_color?: string;
+  qr_bg_color?: string;
+  qr_dot_style?: string;
+  qr_corner_style?: string;
+  qr_use_logo?: boolean;
+  slug?: string;
 }
 
 // --- STİL SEÇENEKLERİ ---
@@ -97,6 +103,8 @@ export default function QRCustomizer() {
   const [useLogo,       setUseLogo]       = useState(false);
   const [transparentBg, setTransparentBg] = useState(false);
   const [downloading,   setDownloading]   = useState<string | null>(null);
+  const [saving,        setSaving]        = useState(false);
+  const [toast,         setToast]         = useState<{msg: string, type: 'success'|'error'} | null>(null);
 
   // Optimizasyon için (Kasma sorununu çözmek için)
   const [debouncedDotColor, setDebouncedDotColor] = useState('#8B5A2B');
@@ -137,7 +145,7 @@ export default function QRCustomizer() {
   const qrInstance = useRef<QRCodeStyling | null>(null);
 
   const menuUrl = restaurant
-    ? `${window.location.origin}/menu/${restaurant.id}`
+    ? `${window.location.origin}/menu/${restaurant.slug || restaurant.id}`
     : 'https://example.com';
 
   // --- Restoranı yükle ---
@@ -146,13 +154,20 @@ export default function QRCustomizer() {
       if (!restaurantId) return;
       const { data } = await supabase
         .from('restaurants')
-        .select('id, name, primary_color, background_color, logo_url')
+        .select('id, name, slug, primary_color, background_color, logo_url, qr_dot_color, qr_bg_color, qr_dot_style, qr_corner_style, qr_use_logo')
         .eq('id', restaurantId)
         .single();
       if (data) {
         setRestaurant(data);
-        setDotColor(data.primary_color || '#8B5A2B');
-        setDebouncedDotColor(data.primary_color || '#8B5A2B');
+        const initDot = data.qr_dot_color || data.primary_color || '#8B5A2B';
+        const initBg = data.qr_bg_color || '#FFFFFF';
+        setDotColor(initDot);
+        setDebouncedDotColor(initDot);
+        setBgColor(initBg);
+        setDebouncedBgColor(initBg);
+        if (data.qr_dot_style) setDotStyle(data.qr_dot_style as DotType);
+        if (data.qr_corner_style) setCornerStyle(data.qr_corner_style as CornerSquareType);
+        if (data.qr_use_logo !== null) setUseLogo(!!data.qr_use_logo);
       }
       setLoading(false);
     };
@@ -198,13 +213,31 @@ export default function QRCustomizer() {
     setDownloading(key);
     qrInstance.current.update(buildOptions(size, dotColor, bgColor));
     await new Promise(r => setTimeout(r, 200));
-    await qrInstance.current.download({
-      name: `qr-${restaurant?.name || 'menu'}`,
-      extension: ext,
-    });
-    await new Promise(r => setTimeout(r, 200));
-    qrInstance.current.update(buildOptions(280, debouncedDotColor, debouncedBgColor));
-    setDownloading(null);
+    qrInstance.current.download({ name: `qr-${restaurant?.name || 'menu'}`, extension: ext });
+    setTimeout(() => {
+      setDownloading(null);
+      qrInstance.current?.update(buildOptions(280, debouncedDotColor, debouncedBgColor));
+    }, 1000);
+  };
+
+  const handleSaveToDatabase = async () => {
+    if (!restaurantId) return;
+    setSaving(true);
+    const { error } = await supabase.from('restaurants').update({
+      qr_dot_color: debouncedDotColor,
+      qr_bg_color: debouncedBgColor,
+      qr_dot_style: dotStyle,
+      qr_corner_style: cornerStyle,
+      qr_use_logo: useLogo
+    }).eq('id', restaurantId);
+
+    if (error) {
+      setToast({ msg: 'Kaydedilirken hata oluştu!', type: 'error' });
+    } else {
+      setToast({ msg: 'Sistem QR kod ayarları kaydedildi!', type: 'success' });
+    }
+    setSaving(false);
+    setTimeout(() => setToast(null), 3000);
   };
 
   const applyPreset = (preset: (typeof COLOR_PRESETS)[0]) => {
@@ -357,6 +390,21 @@ export default function QRCustomizer() {
                 </button>
               </div>
             </div>
+
+            {/* KAYDET */}
+            <div className="w-full bg-blue-50 border-4 border-blue-400 shadow-pixel p-4 mt-4">
+              <p className="font-bold uppercase text-blue-900 mb-3 border-b-2 border-blue-400 pb-2 text-lg">
+                💾 Sisteme Kaydet
+              </p>
+              <p className="text-sm font-bold text-blue-800/80 mb-3">Bu stili masalardaki QR kodlarda varsayılan yapmak için kaydedin.</p>
+              <button
+                onClick={handleSaveToDatabase}
+                disabled={saving}
+                className="w-full py-3 border-2 border-blue-900 bg-blue-500 text-white font-bold hover:bg-blue-600 shadow-pixel-sm disabled:opacity-60 transition-all active:translate-y-0.5"
+              >
+                {saving ? 'Kaydediliyor...' : 'Tüm Masalara Uygula'}
+              </button>
+            </div>
           </div>
 
           {/* SAĞ: AYARLAR */}
@@ -481,6 +529,16 @@ export default function QRCustomizer() {
           </div>
         </div>
       </div>
+      
+      {/* TOAST */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 animate-bounce-in">
+          <div className={`px-6 py-4 border-4 shadow-pixel font-bold text-lg text-white flex items-center gap-3 ${toast.type === 'success' ? 'bg-[#8fb38a] border-[#5b7a57]' : 'bg-[#d97777] border-[#8a3c3c]'}`}>
+            <span>{toast.type === 'success' ? '✓' : '✕'}</span>
+            <span>{toast.msg}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -15,6 +15,12 @@ export interface Restaurant {
   header_style?: 'center' | 'left' | 'banner';
   nav_style?: 'scroll' | 'tabs';
   card_bg_color?: string;
+  qr_dot_color?: string;
+  qr_bg_color?: string;
+  qr_dot_style?: string;
+  qr_corner_style?: string;
+  qr_use_logo?: boolean;
+  slug?: string;
 }
 
 export interface Category {

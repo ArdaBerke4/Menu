@@ -5,6 +5,7 @@ const Menu = lazy(() => import('./pages/Menu'));
 const Admin = lazy(() => import('./pages/Admin'));
 const Auth = lazy(() => import('./pages/Auth'));
 const QRCustomizer = lazy(() => import('./pages/QRCustomizer'));
+const ManagementDashboard = lazy(() => import('./pages/ManagementDashboard'));
 
 function LoadingFallback() {
   return (
@@ -29,8 +30,11 @@ function App() {
           {/* QR Kod Özelleştirici */}
           <Route path="/qr/:restaurantId" element={<QRCustomizer />} />
           
+          {/* Masa ve Sipariş Yönetimi (POS) */}
+          <Route path="/pos/:restaurantId" element={<ManagementDashboard />} />
+          
           {/* Müşteriler İçin (Dinamik Link) */}
-          <Route path="/menu/:id" element={<Menu />} />
+          <Route path="/menu/:slug" element={<Menu />} />
         </Routes>
       </Suspense>
     </BrowserRouter>
