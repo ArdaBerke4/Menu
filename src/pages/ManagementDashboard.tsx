@@ -5,6 +5,7 @@ import { useRealtimeOrders } from '../hooks/useRealtimeOrders';
 import { TableCard } from '../components/pos/TableCard';
 import { TableDetailModal } from '../components/pos/TableDetailModal';
 import { PriorityOrdersModal } from '../components/pos/PriorityOrdersModal';
+import { StatisticsModal } from '../components/pos/StatisticsModal';
 import type { Table } from '../types/pos';
 import type { Category, Product } from '../types/admin';
 
@@ -19,6 +20,7 @@ export default function ManagementDashboard() {
   const [showAddTable, setShowAddTable] = useState(false);
   const [newTableCount, setNewTableCount] = useState('1');
   const [showPriorityOrders, setShowPriorityOrders] = useState(false);
+  const [showStatistics, setShowStatistics] = useState(false);
   const [addLoading, setAddLoading] = useState(false);
   const [restaurant, setRestaurant] = useState<any>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -148,6 +150,12 @@ export default function ManagementDashboard() {
               )}
             </button>
             <button
+              onClick={() => setShowStatistics(true)}
+              className="px-5 py-2 bg-blue-100 text-blue-800 border-2 border-blue-500 font-bold hover:bg-blue-200 shadow-pixel-sm transition-all active:translate-y-0.5"
+            >
+              📊 İstatistikler
+            </button>
+            <button
               onClick={() => setShowAddTable(true)}
               className="px-5 py-2 bg-[#8fb38a] text-brand-dark border-2 border-brand-dark font-bold hover:bg-[#a3c79e] shadow-pixel-sm transition-all active:translate-y-0.5"
             >
@@ -268,6 +276,13 @@ export default function ManagementDashboard() {
           tables={tables}
           onClose={() => setShowPriorityOrders(false)}
           showToast={showToast}
+        />
+      )}
+
+      {showStatistics && restaurantId && (
+        <StatisticsModal
+          restaurantId={restaurantId}
+          onClose={() => setShowStatistics(false)}
         />
       )}
 

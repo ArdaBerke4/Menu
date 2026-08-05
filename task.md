@@ -1,0 +1,12 @@
+- [x] Create `src/components/pos/StatisticsModal.tsx`
+  - [x] Add Daily, Weekly, Monthly tabs
+  - [x] Fetch paid orders and items for the selected date range from Supabase
+  - [x] Calculate total revenue
+  - [x] Calculate sales per product (quantity and revenue)
+  - [x] Calculate "Frequently bought together" combinations
+  - [x] Build the UI (tables, metric cards)
+- [x] Update `src/pages/ManagementDashboard.tsx`
+  - [x] Add the "İstatistikler" button to the top header
+  - [x] Add state to toggle `StatisticsModal`
+- [x] Test the new feature
+- [ ] Create walkthrough
