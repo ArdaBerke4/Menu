@@ -18,9 +18,18 @@ export function PriorityOrdersModal({
     i.status === 'pending' && orders.some(o => o.id === i.order_id)
   );
   
-  // En eskiden en yeniye sırala
-  const sortedItems = [...pendingItems].sort((a, b) => {
-    return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+  // Sipariş ID'sine göre grupla
+  const groupedOrders = pendingItems.reduce((acc, item) => {
+    if (!acc[item.order_id]) {
+      acc[item.order_id] = [];
+    }
+    acc[item.order_id].push(item);
+    return acc;
+  }, {} as Record<string, OrderItem[]>);
+
+  // Grupları en eskiden en yeniye sırala
+  const sortedGroups = Object.values(groupedOrders).sort((a, b) => {
+    return new Date(a[0].created_at || 0).getTime() - new Date(b[0].created_at || 0).getTime();
   });
 
   const handleDeliver = async (item: OrderItem) => {
@@ -43,7 +52,7 @@ export function PriorityOrdersModal({
           <div>
             <h2 className="text-2xl font-bold text-yellow-900 uppercase">Öncelikli Siparişler</h2>
             <p className="text-sm font-bold text-yellow-700/70 mt-1">
-              {sortedItems.length} bekleyen ürün
+              {pendingItems.length} bekleyen ürün
             </p>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-black/5 active:scale-95 transition-all" title="Kapat (ESC)">
@@ -53,19 +62,20 @@ export function PriorityOrdersModal({
 
         {/* Liste */}
         <div className="flex-1 p-5 space-y-4">
-          {sortedItems.length === 0 ? (
+          {sortedGroups.length === 0 ? (
             <div className="text-center py-10 opacity-50 font-bold">
               <p className="text-4xl mb-4">✨</p>
               <p>Bekleyen sipariş yok!</p>
             </div>
           ) : (
-            sortedItems.map(item => {
-              const order = orders.find(o => o.id === item.order_id);
+            sortedGroups.map(group => {
+              const firstItem = group[0];
+              const order = orders.find(o => o.id === firstItem.order_id);
               const table = tables.find(t => t.id === order?.table_id);
-              const timeString = item.created_at ? new Date(item.created_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : '';
+              const timeString = firstItem.created_at ? new Date(firstItem.created_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : '';
               
               return (
-                <div key={item.id} className="bg-white border-2 border-brand-dark p-4 flex flex-col gap-3 shadow-pixel-sm">
+                <div key={order?.id || firstItem.id} className="bg-white border-2 border-brand-dark p-4 flex flex-col gap-3 shadow-pixel-sm">
                   <div className="flex items-start justify-between border-b-2 border-brand-dark/10 pb-2">
                     <div>
                       <span className="bg-brand-dark text-white text-xs px-2 py-1 font-bold">
@@ -77,20 +87,24 @@ export function PriorityOrdersModal({
                     </div>
                   </div>
                   
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-bold text-lg text-brand-dark">
-                        {item.quantity}x {item.product_name}
-                      </p>
-                      {item.note && <p className="text-xs text-brand-dark/60 italic">Not: {item.note}</p>}
-                    </div>
-                    
-                    <button
-                      onClick={() => handleDeliver(item)}
-                      className="bg-green-100 text-green-700 border-2 border-green-500 font-bold px-4 py-2 hover:bg-green-200 active:scale-95 transition-all"
-                    >
-                      ✓ Teslim Et
-                    </button>
+                  <div className="flex flex-col gap-3 mt-1">
+                    {group.map(item => (
+                      <div key={item.id} className="flex items-center justify-between border-b border-dashed border-brand-dark/10 last:border-0 pb-3 last:pb-0">
+                        <div>
+                          <p className="font-bold text-lg text-brand-dark">
+                            {item.quantity}x {item.product_name}
+                          </p>
+                          {item.note && <p className="text-xs text-brand-dark/60 italic">Not: {item.note}</p>}
+                        </div>
+                        
+                        <button
+                          onClick={() => handleDeliver(item)}
+                          className="bg-green-100 text-green-700 border-2 border-green-500 font-bold px-4 py-2 hover:bg-green-200 active:scale-95 transition-all text-sm shrink-0"
+                        >
+                          ✓ Teslim Et
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 </div>
               );

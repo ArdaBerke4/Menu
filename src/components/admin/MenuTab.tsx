@@ -67,8 +67,13 @@ export function MenuTab(props: any) {
             </label>
           </div>
           <div className="mt-4 flex flex-col gap-1 text-xs font-bold opacity-60">
-            <span>Örnek Tablo:</span>
-            <table className="w-full border border-brand-dark text-left bg-white">
+            <div className="flex items-center justify-between">
+              <span>Örnek Tablo:</span>
+              <a href="/ornek_menu.csv" download className="text-brand-dark underline hover:text-brand transition-colors cursor-pointer text-sm">
+                📥 Örnek Dosya İndir
+              </a>
+            </div>
+            <table className="w-full border border-brand-dark text-left bg-white mt-1">
               <thead className="border-b border-brand-dark"><tr><th className="px-2 py-1 border-r border-brand-dark">Kategori</th><th className="px-2 py-1 border-r border-brand-dark">Ürün Adı</th><th className="px-2 py-1">Fiyat</th></tr></thead>
               <tbody><tr><td className="px-2 py-1 border-r border-brand-dark">Tatlılar</td><td className="px-2 py-1 border-r border-brand-dark">Sufle</td><td className="px-2 py-1">150</td></tr></tbody>
             </table>
