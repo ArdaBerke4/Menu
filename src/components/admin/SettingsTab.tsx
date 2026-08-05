@@ -42,7 +42,6 @@ export const BUTTON_SHAPE_OPTIONS = [
 export const LAYOUT_OPTIONS = [
   { id: 'list', name: 'Dikey Liste' },
   { id: 'grid', name: 'Yan Yana (Izgara)' },
-  { id: 'canvas', name: 'Serbest Düzen (Tuval)' },
 ];
 
 export const HEADER_STYLE_OPTIONS = [
@@ -117,12 +116,45 @@ export function SettingsTab(props: any) {
       <div className="flex-1 space-y-8">
         <header className="mb-4">
           <h1 className="text-4xl font-bold uppercase mb-2">Görünüm Ayarları</h1>
-          <p className="text-lg text-brand-dark/60 font-bold">Menünüzün renklerini, yazı tiplerini ve genel düzenini özelleştirin. Tüm değişiklikleri yandaki telefondan canlı izleyebilirsiniz.</p>
+          <p className="text-lg text-admin-text/60 font-bold">Menünüzün renklerini, yazı tiplerini ve genel düzenini özelleştirin. Tüm değişiklikleri yandaki telefondan canlı izleyebilirsiniz.</p>
         </header>
 
         <form onSubmit={saveSettings} className="space-y-6">
-          <div className="bg-[#F4E4C1] border-4 border-brand-dark shadow-pixel p-6 space-y-6">
-            <h2 className="text-2xl font-bold uppercase mb-4 border-b-2 border-brand-dark pb-2">Ana Marka & Renk</h2>
+          <div className="bg-admin-bg border-4 border-admin-border shadow-admin-pixel p-6 space-y-4">
+            <h2 className="text-2xl font-bold uppercase mb-2 border-b-2 border-admin-border pb-2">Hazır Temalar</h2>
+            <p className="text-sm opacity-80 font-bold mb-4">Aşağıdaki hazır temalardan birini seçerek renkleri ve fontları hızlıca ayarlayabilirsiniz.</p>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {[
+                { id: 'classic', name: 'Klasik Kahve', theme: '#8B5A2B', bg: '#F4E4C1', card: '#FFFFFF', font: '"VT323", monospace' },
+                { id: 'dark', name: 'Karanlık (Dark)', theme: '#D4A373', bg: '#1E1E1E', card: '#2D2D2D', font: '"Inter", sans-serif' },
+                { id: 'light', name: 'Aydınlık (Light)', theme: '#2C3E50', bg: '#F8F9FA', card: '#FFFFFF', font: '"Inter", sans-serif' },
+                { id: 'elegant', name: 'Zarif', theme: '#9E7676', bg: '#FFF8F3', card: '#FFFFFF', font: '"Playfair Display", serif' },
+                { id: 'retro', name: 'Retro Yeşil', theme: '#4ADE80', bg: '#000000', card: '#1A1A1A', font: '"VT323", monospace' },
+              ].map(theme => (
+                <button
+                  key={theme.id}
+                  type="button"
+                  onClick={() => {
+                    saveToHistory();
+                    setThemeColor(theme.theme);
+                    setBgColor(theme.bg);
+                    setCardBgColor(theme.card);
+                    setThemeFont(theme.font);
+                  }}
+                  className="p-3 border-2 border-admin-border hover:scale-105 transition-transform flex items-center gap-3 text-left bg-admin-surface shadow-admin-pixel-sm hover:shadow-admin-pixel"
+                >
+                  <div className="w-8 h-8 border-2 border-admin-border shrink-0" style={{ backgroundColor: theme.theme }}></div>
+                  <div className="min-w-0">
+                    <div className="font-bold text-sm uppercase truncate">{theme.name}</div>
+                    <div className="text-xs opacity-60 italic truncate">Font: {theme.font.split(',')[0].replace(/"/g, '')}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-admin-bg border-4 border-admin-border shadow-admin-pixel p-6 space-y-6">
+            <h2 className="text-2xl font-bold uppercase mb-4 border-b-2 border-admin-border pb-2">Ana Marka & Renk</h2>
 
             <div>
               <label className="block font-bold mb-2">Restoran Logosu</label>
@@ -133,7 +165,7 @@ export function SettingsTab(props: any) {
                 if (e.target.files && e.target.files[0]) {
                   setLogoFile(e.target.files[0]);
                 }
-              }} className="block w-full text-sm text-brand-dark file:mr-4 file:py-2 file:px-4 file:border-2 file:border-brand-dark file:bg-brand file:text-surface file:font-bold hover:file:opacity-90 cursor-pointer" />
+              }} className="block w-full text-sm text-admin-text file:mr-4 file:py-2 file:px-4 file:border-2 file:border-admin-border file:bg-brand file:text-surface file:font-bold hover:file:opacity-90 cursor-pointer" />
             </div>
 
             <div>
@@ -158,8 +190,8 @@ export function SettingsTab(props: any) {
             </div>
           </div>
 
-          <div className="bg-[#F4E4C1] border-4 border-brand-dark shadow-pixel p-6 space-y-6">
-            <h2 className="text-2xl font-bold uppercase mb-4 border-b-2 border-brand-dark pb-2">Arka Plan & Zemin</h2>
+          <div className="bg-admin-bg border-4 border-admin-border shadow-admin-pixel p-6 space-y-6">
+            <h2 className="text-2xl font-bold uppercase mb-4 border-b-2 border-admin-border pb-2">Arka Plan & Zemin</h2>
             
             <div>
               <label className="block font-bold mb-2">Arka Plan Rengi</label>
@@ -178,7 +210,7 @@ export function SettingsTab(props: any) {
                   <button
                     key={preset.id} type="button"
                     onClick={() => { saveToHistory(); setBgImageUrl(preset.id); setBgUploadFile(null); }}
-                    className={`px-4 py-3 border-2 border-brand-dark font-bold transition-all text-sm ${bgImageUrl === preset.id ? 'bg-brand text-surface shadow-pixel' : 'bg-white hover:bg-brand-light'}`}
+                    className={`px-4 py-3 border-2 border-admin-border font-bold transition-all text-sm ${bgImageUrl === preset.id ? 'bg-brand text-surface shadow-admin-pixel' : 'bg-admin-surface hover:bg-brand-light'}`}
                   >
                     {preset.name}
                   </button>
@@ -194,29 +226,29 @@ export function SettingsTab(props: any) {
                   setBgUploadFile(e.target.files[0]);
                   setBgImageUrl('');
                 }
-              }} className="block w-full text-sm text-brand-dark file:mr-4 file:py-2 file:px-4 file:border-2 file:border-brand-dark file:bg-white file:text-brand-dark file:font-bold hover:file:bg-brand-light cursor-pointer" />
+              }} className="block w-full text-sm text-admin-text file:mr-4 file:py-2 file:px-4 file:border-2 file:border-admin-border file:bg-admin-surface file:text-admin-text file:font-bold hover:file:bg-brand-light cursor-pointer" />
               {bgUploadFile && <p className="mt-2 text-sm font-bold text-[#5b7a57]">✓ {bgUploadFile.name} seçildi</p>}
             </div>
           </div>
 
-          <div className="bg-[#F4E4C1] border-4 border-brand-dark shadow-pixel p-6 space-y-6">
-            <h2 className="text-2xl font-bold uppercase mb-4 border-b-2 border-brand-dark pb-2">Tipografi & Şekiller</h2>
+          <div className="bg-admin-bg border-4 border-admin-border shadow-admin-pixel p-6 space-y-6">
+            <h2 className="text-2xl font-bold uppercase mb-4 border-b-2 border-admin-border pb-2">Tipografi & Şekiller</h2>
             
             <div>
               <label className="block font-bold mb-2">Yazı Tipi Ailesi</label>
-              <select value={themeFont} onChange={e => { saveToHistory(); setThemeFont(e.target.value); }} className="w-full px-4 py-3 border-2 border-brand-dark bg-white font-bold focus:outline-none">
+              <select value={themeFont} onChange={e => { saveToHistory(); setThemeFont(e.target.value); }} className="w-full px-4 py-3 border-2 border-admin-border bg-admin-surface font-bold focus:outline-none">
                 {FONT_OPTIONS.map(opt => <option key={opt.id} value={opt.id}>{opt.name}</option>)}
               </select>
             </div>
 
             <div>
               <label className="block font-bold mb-2">Yazı Boyutu</label>
-              <div className="flex bg-white border-2 border-brand-dark">
+              <div className="flex bg-admin-surface border-2 border-admin-border">
                 {FONT_SIZE_OPTIONS.map(opt => (
                   <button
                     key={opt.id} type="button"
                     onClick={() => { saveToHistory(); setFontSize(opt.id); }}
-                    className={`flex-1 py-2 font-bold text-sm transition-colors border-r-2 border-brand-dark last:border-r-0 ${fontSize === opt.id ? 'bg-brand text-surface' : 'hover:bg-brand-light'}`}
+                    className={`flex-1 py-2 font-bold text-sm transition-colors border-r-2 border-admin-border last:border-r-0 ${fontSize === opt.id ? 'bg-brand text-surface' : 'hover:bg-brand-light'}`}
                   >
                     {opt.name}
                   </button>
@@ -226,42 +258,42 @@ export function SettingsTab(props: any) {
 
             <div>
               <label className="block font-bold mb-2">Buton Şekilleri</label>
-              <select value={buttonShape} onChange={e => { saveToHistory(); setButtonShape(e.target.value); }} className="w-full px-4 py-3 border-2 border-brand-dark bg-white font-bold focus:outline-none">
+              <select value={buttonShape} onChange={e => { saveToHistory(); setButtonShape(e.target.value); }} className="w-full px-4 py-3 border-2 border-admin-border bg-admin-surface font-bold focus:outline-none">
                 {BUTTON_SHAPE_OPTIONS.map(opt => <option key={opt.id} value={opt.id}>{opt.name}</option>)}
               </select>
             </div>
           </div>
 
-          <div className="bg-[#F4E4C1] border-4 border-brand-dark shadow-pixel p-6 space-y-6">
-            <h2 className="text-2xl font-bold uppercase mb-4 border-b-2 border-brand-dark pb-2">Menü Yerleşimi</h2>
+          <div className="bg-admin-bg border-4 border-admin-border shadow-admin-pixel p-6 space-y-6">
+            <h2 className="text-2xl font-bold uppercase mb-4 border-b-2 border-admin-border pb-2">Menü Yerleşimi</h2>
             
             <div>
               <label className="block font-bold mb-2">Başlık Tasarımı</label>
-              <select value={headerStyle} onChange={e => { saveToHistory(); setHeaderStyle(e.target.value as any); }} className="w-full px-4 py-3 border-2 border-brand-dark bg-white font-bold focus:outline-none">
+              <select value={headerStyle} onChange={e => { saveToHistory(); setHeaderStyle(e.target.value as any); }} className="w-full px-4 py-3 border-2 border-admin-border bg-admin-surface font-bold focus:outline-none">
                 {HEADER_STYLE_OPTIONS.map(opt => <option key={opt.id} value={opt.id}>{opt.name}</option>)}
               </select>
             </div>
 
             <div>
               <label className="block font-bold mb-2">Kategori Düzeni</label>
-              <select value={navStyle} onChange={e => { saveToHistory(); setNavStyle(e.target.value as any); }} className="w-full px-4 py-3 border-2 border-brand-dark bg-white font-bold focus:outline-none">
+              <select value={navStyle} onChange={e => { saveToHistory(); setNavStyle(e.target.value as any); }} className="w-full px-4 py-3 border-2 border-admin-border bg-admin-surface font-bold focus:outline-none">
                 {NAV_STYLE_OPTIONS.map(opt => <option key={opt.id} value={opt.id}>{opt.name}</option>)}
               </select>
             </div>
 
             <div>
               <label className="block font-bold mb-2">Ürün Düzeni (Layout)</label>
-              <select value={layoutStyle} onChange={e => { saveToHistory(); setLayoutStyle(e.target.value as any); }} className="w-full px-4 py-3 border-2 border-brand-dark bg-white font-bold focus:outline-none">
+              <select value={layoutStyle} onChange={e => { saveToHistory(); setLayoutStyle(e.target.value as any); }} className="w-full px-4 py-3 border-2 border-admin-border bg-admin-surface font-bold focus:outline-none">
                 {LAYOUT_OPTIONS.map(opt => <option key={opt.id} value={opt.id}>{opt.name}</option>)}
               </select>
             </div>
           </div>
 
-          <div className="flex gap-4 sticky bottom-4 z-10 p-4 bg-[#F4E4C1] border-4 border-brand-dark shadow-pixel">
-            <button type="submit" disabled={loading} className="flex-1 py-3 bg-brand text-surface border-2 border-brand-dark font-bold uppercase text-xl hover:opacity-90 shadow-pixel disabled:opacity-50 transition-transform active:translate-y-1">
+          <div className="flex gap-4 sticky bottom-4 z-10 p-4 bg-admin-bg border-4 border-admin-border shadow-admin-pixel">
+            <button type="submit" disabled={loading} className="flex-1 py-3 bg-brand text-surface border-2 border-admin-border font-bold uppercase text-xl hover:opacity-90 shadow-admin-pixel disabled:opacity-50 transition-transform active:translate-y-1">
               {loading ? 'Kaydediliyor...' : 'Değişiklikleri Kaydet'}
             </button>
-            <button type="button" onClick={handleUndoSettings} disabled={settingsHistory.length === 0} className="px-6 bg-white text-brand-dark border-2 border-brand-dark font-bold uppercase hover:bg-brand-light shadow-pixel disabled:opacity-50 transition-transform active:translate-y-1">
+            <button type="button" onClick={handleUndoSettings} disabled={settingsHistory.length === 0} className="px-6 bg-admin-surface text-admin-text border-2 border-admin-border font-bold uppercase hover:bg-brand-light shadow-admin-pixel disabled:opacity-50 transition-transform active:translate-y-1">
               Geri Al
             </button>
           </div>
@@ -269,13 +301,13 @@ export function SettingsTab(props: any) {
       </div>
 
       {/* SAĞ KOLON */}
-      <div className="space-y-6 border-l-4 border-brand-dark pl-8 relative w-80 shrink-0">
+      <div className="space-y-6 border-l-4 border-admin-border pl-8 relative w-80 shrink-0">
         <div className="sticky top-4 z-10 w-full mb-6">
           <h2 className="text-xl font-bold uppercase mb-4 flex items-center justify-between">
             <span>Canlı Önizleme</span>
-            <span className="text-sm font-normal px-2 py-1 bg-brand-light border-2 border-brand-dark">Demo</span>
+            <span className="text-sm font-normal px-2 py-1 bg-brand-light border-2 border-admin-border">Demo</span>
           </h2>
-          <div className="border-8 border-black rounded-[40px] shadow-2xl overflow-hidden h-[600px] w-full bg-white relative flex flex-col items-center">
+          <div className="border-8 border-black rounded-[40px] shadow-2xl overflow-hidden h-[600px] w-full bg-admin-surface relative flex flex-col items-center">
             {/* Notch */}
             <div className="absolute top-0 w-1/2 h-6 bg-black rounded-b-xl z-20"></div>
 
@@ -294,7 +326,7 @@ export function SettingsTab(props: any) {
               <div className="min-h-full flex flex-col p-4 pt-8" style={{ fontFamily: themeFont }}>
                 
                 {/* Header */}
-                <div className={`w-full ${headerStyle === 'left' ? 'p-4 flex items-center gap-3 text-left' : headerStyle === 'banner' ? 'relative text-center' : 'p-4 text-center'} bg-white/80 backdrop-blur-sm shadow-sm mb-4`} style={{ color: themeColor }}>
+                <div className={`w-full ${headerStyle === 'left' ? 'p-4 flex items-center gap-3 text-left' : headerStyle === 'banner' ? 'relative text-center' : 'p-4 text-center'} bg-admin-surface/80 backdrop-blur-sm shadow-sm mb-4`} style={{ color: themeColor }}>
                   {headerStyle === 'banner' && <div className="w-full h-16 bg-black/10 border-b-2" style={{ borderColor: themeColor }}></div>}
                   <div className={`bg-gray-100 border-2 overflow-hidden shrink-0 ${
                     headerStyle === 'banner' ? 'w-12 h-12 absolute left-1/2 -translate-x-1/2 -top-6' : 
@@ -312,10 +344,10 @@ export function SettingsTab(props: any) {
 
                 {/* Nav */}
                 {navStyle === 'tabs' && (
-                  <div className="w-full px-2 py-3 flex gap-2 overflow-hidden border-b-2 bg-white/50 mb-4" style={{ borderColor: `${themeColor}40` }}>
+                  <div className="w-full px-2 py-3 flex gap-2 overflow-hidden border-b-2 bg-admin-surface/50 mb-4" style={{ borderColor: `${themeColor}40` }}>
                     <div className={`px-3 py-1 font-bold text-[10px] border-2 shadow-sm whitespace-nowrap`} style={{ backgroundColor: themeColor, color: 'white', borderColor: themeColor, borderRadius: buttonShape === 'pill' ? '99px' : buttonShape === 'rounded' ? '8px' : '0' }}>Popüler</div>
-                    <div className={`px-3 py-1 font-bold text-[10px] border-2 shadow-sm whitespace-nowrap bg-white`} style={{ color: themeColor, borderColor: themeColor, borderRadius: buttonShape === 'pill' ? '99px' : buttonShape === 'rounded' ? '8px' : '0' }}>Tatlılar</div>
-                    <div className={`px-3 py-1 font-bold text-[10px] border-2 shadow-sm whitespace-nowrap bg-white`} style={{ color: themeColor, borderColor: themeColor, borderRadius: buttonShape === 'pill' ? '99px' : buttonShape === 'rounded' ? '8px' : '0' }}>İçecekler</div>
+                    <div className={`px-3 py-1 font-bold text-[10px] border-2 shadow-sm whitespace-nowrap bg-admin-surface`} style={{ color: themeColor, borderColor: themeColor, borderRadius: buttonShape === 'pill' ? '99px' : buttonShape === 'rounded' ? '8px' : '0' }}>Tatlılar</div>
+                    <div className={`px-3 py-1 font-bold text-[10px] border-2 shadow-sm whitespace-nowrap bg-admin-surface`} style={{ color: themeColor, borderColor: themeColor, borderRadius: buttonShape === 'pill' ? '99px' : buttonShape === 'rounded' ? '8px' : '0' }}>İçecekler</div>
                   </div>
                 )}
 
@@ -351,12 +383,7 @@ export function SettingsTab(props: any) {
                       </div>
                     </div>
                   )}
-                  {layoutStyle === 'canvas' && (
-                    <div className="relative w-full h-full border-2 bg-white/30 backdrop-blur-sm" style={{ borderColor: `${themeColor}40`, borderRadius: buttonShape === 'pill' ? '12px' : buttonShape === 'rounded' ? '8px' : '0' }}>
-                      <div className="absolute top-4 left-4 p-1 px-2 text-[8px] border bg-white shadow-sm font-bold" style={{ color: themeColor, borderColor: themeColor }}>İçecekler</div>
-                      <div className="absolute top-12 left-10 p-1 px-2 text-[8px] border bg-white shadow-sm font-bold" style={{ color: themeColor, borderColor: themeColor }}>Tatlılar</div>
-                    </div>
-                  )}
+                  
                 </div>
               </div>
             </div>

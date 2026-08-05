@@ -11,7 +11,7 @@ export interface Restaurant {
   button_shape?: string;
   description?: string;
   address?: string;
-  layout_style?: 'list' | 'grid' | 'canvas';
+  layout_style?: 'list' | 'grid';
   header_style?: 'center' | 'left' | 'banner';
   nav_style?: 'scroll' | 'tabs';
   card_bg_color?: string;
@@ -32,6 +32,18 @@ export interface Category {
   pos_y?: number;
 }
 
+export interface ProductOptionChoice {
+  name: string;
+  price: number;
+}
+
+export interface ProductOption {
+  name: string;
+  type: 'single' | 'multiple';
+  required: boolean;
+  choices: ProductOptionChoice[];
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -40,6 +52,7 @@ export interface Product {
   category_id: string;
   image_url?: string;
   sort_order?: number;
+  options?: ProductOption[];
 }
 
 export interface Campaign {

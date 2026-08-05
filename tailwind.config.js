@@ -16,12 +16,35 @@ export default {
           dark: '#4A3728', // Koyu ahşap
         },
         surface: '#FDF6E3', // Sıcak kağıt/duvar rengi
-        ink: '#2C1E16' // Siyah yerine çok koyu kahverengi
+        ink: '#2C1E16', // Siyah yerine çok koyu kahverengi
+        
+        // Admin UI Colors
+        admin: {
+          bg: 'var(--admin-bg)',
+          surface: 'var(--admin-surface)',
+          border: 'var(--admin-border)',
+          text: 'var(--admin-text)',
+          'text-muted': 'var(--admin-text-muted)',
+          primary: 'var(--admin-primary)',
+          'primary-hover': 'var(--admin-primary-hover)',
+          'primary-text': 'var(--admin-primary-text)',
+          danger: 'var(--admin-danger)',
+          'danger-hover': 'var(--admin-danger-hover)',
+          'danger-text': 'var(--admin-danger-text)',
+          'primary-faint': 'var(--admin-primary-faint)',
+          'danger-faint': 'var(--admin-danger-faint)',
+          sidebar: 'var(--admin-sidebar)',
+          'sidebar-hover': 'var(--admin-sidebar-hover)',
+        }
       },
       boxShadow: {
         // Eski oyunlardaki gibi sert ve kalın gölgeler
         'pixel': '4px 4px 0px 0px rgba(74, 55, 40, 1)',
         'pixel-sm': '2px 2px 0px 0px rgba(74, 55, 40, 1)',
+        
+        // Admin UI Shadows
+        'admin-pixel': 'var(--admin-shadow)',
+        'admin-pixel-sm': 'var(--admin-shadow-sm)',
       },
       keyframes: {
         'scale-in': {

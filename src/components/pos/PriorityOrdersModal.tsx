@@ -94,7 +94,12 @@ export function PriorityOrdersModal({
                           <p className="font-bold text-lg text-brand-dark">
                             {item.quantity}x {item.product_name}
                           </p>
-                          {item.note && <p className="text-xs text-brand-dark/60 italic">Not: {item.note}</p>}
+                          {item.selected_options && item.selected_options.length > 0 && (
+                            <p className="text-sm text-brand-dark/80 italic font-bold">
+                              {item.selected_options.map((o: any) => o.choiceName).join(', ')}
+                            </p>
+                          )}
+                          {item.note && <p className="text-xs text-brand-dark/60 italic font-bold">Not: {item.note}</p>}
                         </div>
                         
                         <button

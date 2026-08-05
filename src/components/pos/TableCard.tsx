@@ -36,25 +36,27 @@ export function TableCard({ table, orders, orderItems, onClick }: TableCardProps
   return (
     <button
       onClick={() => onClick(table)}
-      className={`${finalBg} border-4 ${finalBorder} p-5 flex flex-col items-center gap-3 transition-all hover:-translate-y-1 hover:shadow-lg active:translate-y-0 cursor-pointer text-left w-full relative`}
+      className={`${finalBg} border-4 ${finalBorder} p-5 pb-8 flex flex-col items-center gap-3 transition-all hover:-translate-y-1 hover:shadow-lg active:translate-y-0 cursor-pointer text-left w-full relative`}
     >
-      {/* Garson Uyarı Etiketi */}
+      {/* Garson Uyarısı Etiketi */}
       {isCallingWaiter && (
         <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 whitespace-nowrap border-2 border-black z-10 animate-bounce">
-          🔔 GARSON ÇAĞRILDI
+          🔔 GARSON ÇAĞIRILDI
         </div>
       )}
 
       {/* Durum noktası */}
       <div className={`absolute top-3 right-3 w-3 h-3 rounded-full ${config.dot} ${hasActiveOrders ? 'animate-pulse' : ''}`} />
 
-      {/* Masa numarası */}
-      <div className="text-4xl font-bold text-brand-dark">
+      {/* Masa Numarası (Sol Alt) */}
+      <div className="absolute bottom-2 left-3 text-2xl font-black text-brand-dark/20 pointer-events-none">
         {table.table_number}
       </div>
-      <span className="text-sm font-bold text-brand-dark/50 uppercase tracking-wider">
+
+      {/* Masa ismi (Orta Üst) */}
+      <div className="text-3xl font-bold text-brand-dark uppercase tracking-wider text-center mt-2 break-words w-full">
         {table.label || `Masa ${table.table_number}`}
-      </span>
+      </div>
 
       {/* Kapasite */}
       <div className="flex items-center gap-1 text-xs text-brand-dark/40 font-bold">
@@ -64,7 +66,7 @@ export function TableCard({ table, orders, orderItems, onClick }: TableCardProps
 
       {/* Sipariş bilgisi */}
       {hasActiveOrders ? (
-        <div className="w-full space-y-1.5 mt-1 border-t border-brand-dark/10 pt-3">
+        <div className="w-full space-y-1.5 mt-1 border-t border-brand-dark/10 pt-3 relative z-10">
           <div className="flex flex-wrap gap-1.5 justify-center">
             {pendingCount > 0 && (
               <span className="text-xs font-bold bg-yellow-200 text-yellow-800 px-2 py-0.5 border border-yellow-400">

@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabase';
 import { useParams } from 'react-router-dom';
-import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+import { ProductOptionsModal } from '../components/menu/ProductOptionsModal';
+import type { ProductOption } from '../types/admin';
+import type { SelectedOption } from '../types/pos';
+
 
 interface Restaurant {
   id: string;
@@ -16,15 +19,15 @@ interface Restaurant {
   button_shape?: string;
   description?: string;
   address?: string;
-  layout_style?: 'list' | 'grid' | 'canvas';
+  layout_style?: 'list' | 'grid';
   header_style?: 'center' | 'left' | 'banner';
   nav_style?: 'scroll' | 'tabs';
   card_bg_color?: string;
 }
 
 interface Category { id: string; name: string; restaurant_id: string; pos_x?: number; pos_y?: number; }
-interface Product { id: string; name: string; description?: string; price: number; category_id: string; image_url?: string; }
-interface CartItem { product: Product; quantity: number; }
+interface Product { id: string; name: string; description?: string; price: number; category_id: string; image_url?: string; options?: ProductOption[]; }
+interface CartItem { id: string; product: Product; quantity: number; note?: string; selected_options?: SelectedOption[]; }
 interface Campaign { id: string; restaurant_id: string; name: string; discount_percent: number; category_id: string | null; is_active: boolean; }
 
 // --- DİL SİSTEMİ ---
@@ -247,20 +250,33 @@ export default function Menu() {
   // SEPET STATE'İ
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
+  const [selectedProductForOptions, setSelectedProductForOptions] = useState<Product | null>(null);
 
-  const addToCart = (product: Product) => {
+  const handleAddToCartClick = (product: Product) => {
+    if (product.options && product.options.length > 0) {
+      setSelectedProductForOptions(product);
+    } else {
+      addToCart(product, 1, '', []);
+    }
+  };
+
+  const addToCart = (product: Product, quantity = 1, note = '', selected_options: SelectedOption[] = []) => {
     setCart(prev => {
-      const existing = prev.find(item => item.product.id === product.id);
-      if (existing) {
-        return prev.map(item => item.product.id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
+      const newItemId = Math.random().toString(36).substr(2, 9);
+      if (selected_options.length > 0 || note) {
+        return [...prev, { id: newItemId, product, quantity, note, selected_options }];
       }
-      return [...prev, { product, quantity: 1 }];
+      const existing = prev.find(item => item.product.id === product.id && (!item.selected_options || item.selected_options.length === 0) && !item.note);
+      if (existing) {
+        return prev.map(item => item.id === existing.id ? { ...item, quantity: item.quantity + quantity } : item);
+      }
+      return [...prev, { id: newItemId, product, quantity, note, selected_options }];
     });
   };
 
-  const updateQuantity = (productId: string, delta: number) => {
+  const updateQuantity = (cartItemId: string, delta: number) => {
     setCart(prev => prev.map(item => {
-      if (item.product.id === productId) {
+      if (item.id === cartItemId) {
         const newQ = item.quantity + delta;
         return newQ > 0 ? { ...item, quantity: newQ } : null;
       }
@@ -288,7 +304,8 @@ export default function Menu() {
   const cartTotalPrice = cart.reduce((acc, item) => {
     const priceInfo = getDiscountedPrice(item.product);
     const effectivePrice = priceInfo.discounted ?? priceInfo.original;
-    return acc + (effectivePrice * item.quantity);
+    const optionsTotal = (item.selected_options || []).reduce((sum, opt) => sum + opt.price, 0);
+    return acc + ((effectivePrice + optionsTotal) * item.quantity);
   }, 0);
 
   // MASADAN SİPARİŞ (POS) STATE'LERİ
@@ -327,7 +344,9 @@ export default function Menu() {
           product_id: item.product.id,
           product_name: item.product.name,
           quantity: item.quantity,
-          unit_price: effectivePrice
+          unit_price: effectivePrice,
+          note: item.note,
+          selected_options: item.selected_options
         };
       });
       
@@ -553,6 +572,7 @@ export default function Menu() {
               {restaurant.logo_url ? <img src={restaurant.logo_url} alt="Logo" loading="lazy" className="w-full h-full object-cover" /> : restaurant.name.charAt(0)}
             </div>
             <div className="flex-1">
+                    
               <h1 className="text-3xl font-bold uppercase leading-tight" style={{ color: themeColor }}>{restaurant.name}</h1>
               <p className="mt-1 text-sm uppercase tracking-widest font-bold opacity-80" style={{ color: themeColor }}>{t.subtitle}</p>
               {restaurant.description && (
@@ -581,8 +601,8 @@ export default function Menu() {
         )}
       </header>
 
-      {/* SIRALAMA ÇUBUĞU (Kanvas Modunda Gizle) */}
-      {restaurant.layout_style !== 'canvas' && (
+      {/* SIRALAMA ÇUBUĞU */}
+      {true && (
         <div className="w-full max-w-md mb-6 sticky top-4 z-10">
           <div
             className="flex items-center justify-between gap-2 px-4 py-3 border-2 shadow-sm backdrop-blur-sm bg-white/90"
@@ -619,70 +639,8 @@ export default function Menu() {
       )}
 
       {/* ÜRÜN LİSTESİ */}
-      <main className={`w-full ${restaurant.layout_style === 'canvas' ? 'max-w-none flex-1 overflow-hidden' : restaurant.layout_style === 'grid' ? 'max-w-4xl' : 'max-w-md'} ${restaurant.layout_style !== 'canvas' ? 'space-y-10' : ''}`}>
+      <main className={`w-full ${restaurant.layout_style === 'grid' ? 'max-w-4xl' : 'max-w-md'} space-y-10`}>
         
-        {restaurant.layout_style === 'canvas' ? (
-          <div className="w-full h-[60vh] border-4 bg-white/50 backdrop-blur-md relative cursor-grab active:cursor-grabbing overflow-hidden" style={{ borderColor: themeColor, borderRadius: borderRadiusValue }}>
-            <div className="absolute top-2 left-0 right-0 text-center pointer-events-none z-10 opacity-70 font-bold" style={{ color: themeColor }}>
-              İki parmağınızla yakınlaştırın, sürükleyerek gezin.
-            </div>
-            <TransformWrapper initialScale={1} minScale={0.5} maxScale={3} centerOnInit>
-              <TransformComponent wrapperStyle={{ width: "100%", height: "100%" }}>
-                <div className="w-[1200px] h-[1200px] relative">
-                  {categories.map(category => {
-                    const categoryProducts = categoryProductsMap[category.id] || [];
-                    if (categoryProducts.length === 0) return null;
-                    return (
-                      <div key={category.id} className="absolute space-y-3" style={{ left: category.pos_x || 0, top: category.pos_y || 0, width: '300px' }}>
-                        <div className={`text-surface px-4 py-2 border-2 inline-block font-bold uppercase shadow-sm ${radiusClass} ${fs.cat}`} style={{ backgroundColor: themeColor, borderColor: themeColor }}>
-                          {translations[category.name] || category.name}
-                        </div>
-                        <div className="space-y-2">
-                          {categoryProducts.map(product => {
-                            const priceInfo = getDiscountedPrice(product);
-                            return (
-                            <div key={product.id} className={`border-2 p-3 shadow-sm flex flex-col gap-2 ${radiusClass}`} style={{ borderColor: themeColor, backgroundColor: cardBgColor }}>
-                              <div className="flex gap-3 h-full">
-                                {product.image_url && (
-                                  <div className={`w-14 h-14 border bg-white shrink-0 overflow-hidden ${radiusClass === 'rounded-full' ? 'rounded-full' : 'rounded-none'}`} style={{ borderColor: themeColor }}>
-                                    <img src={product.image_url} alt={product.name} loading="lazy" className="w-full h-full object-cover" />
-                                  </div>
-                                )}
-                                <div className="flex-1 leading-tight flex flex-col justify-center">
-                                  <h3 className={`font-bold uppercase ${fs.product}`} style={{ color: themeColor }}>{translations[product.name] || product.name}</h3>
-                                  {product.description && <p className={`text-ink/80 leading-snug mt-1 ${fs.desc}`}>{translations[product.description] || product.description}</p>}
-                                </div>
-                                <div className="flex flex-col justify-between items-end shrink-0 gap-1">
-                                  {priceInfo.discounted !== null ? (
-                                    <>
-                                      <span className="text-xs font-bold px-2 py-0.5 bg-red-500 text-white" style={{ borderRadius: borderRadiusValue }}>%{priceInfo.percent}</span>
-                                      <span className="line-through opacity-50 text-sm font-bold" style={{ color: themeColor }}>{priceInfo.original} ₺</span>
-                                      <span className={`font-bold ${fs.price}`} style={{ color: themeColor }}>{priceInfo.discounted} ₺</span>
-                                    </>
-                                  ) : (
-                                    <div className={`font-bold ${fs.price}`} style={{ color: themeColor }}>{product.price} ₺</div>
-                                  )}
-                                  <button
-                                    onClick={() => addToCart(product)}
-                                    className={`w-8 h-8 flex items-center justify-center border-2 font-bold text-lg transition-all hover:scale-105 active:scale-95 ${radiusClass}`}
-                                    style={{ borderColor: themeColor, backgroundColor: themeColor, color: 'white' }}
-                                  >
-                                    +
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </TransformComponent>
-            </TransformWrapper>
-          </div>
-        ) : (
           <div className={restaurant.layout_style === 'grid' ? "grid grid-cols-1 md:grid-cols-2 gap-8" : "space-y-10"}>
             {restaurant.nav_style === 'tabs' && (
               <div 
@@ -770,7 +728,7 @@ export default function Menu() {
                             </div>
                           )}
                           <button
-                            onClick={() => addToCart(product)}
+                            onClick={() => handleAddToCartClick(product)}
                             className={`w-10 h-10 flex items-center justify-center border-2 font-bold text-2xl transition-all hover:scale-105 active:scale-95 ${radiusClass}`}
                             style={{ borderColor: themeColor, backgroundColor: themeColor, color: 'white' }}
                           >
@@ -785,7 +743,7 @@ export default function Menu() {
               );
             })}
           </div>
-        )}
+
       </main>
 
       <footer className="w-full max-w-md mx-auto mt-auto pt-8 pb-20 flex flex-col items-center gap-8 text-center">
@@ -899,15 +857,26 @@ export default function Menu() {
             
             <div className="flex-1 overflow-y-auto space-y-4 py-2">
               {cart.map(item => (
-                <div key={item.product.id} className="flex justify-between items-center gap-4">
+                <div key={item.id} className="flex justify-between items-center gap-4">
                   <div className="flex-1 leading-tight">
                     <div className="font-bold uppercase" style={{ color: themeColor }}>{translations[item.product.name] || item.product.name}</div>
                     <div className="font-bold opacity-80">{item.product.price} ₺</div>
+                  
+                    {item.selected_options && item.selected_options.length > 0 && (
+                      <div className="text-xs mt-1 opacity-70">
+                        {item.selected_options.map((opt, i) => (
+                          <div key={i}>+ {opt.choiceName} {opt.price > 0 && `(${opt.price} ₺)`}</div>
+                        ))}
+                      </div>
+                    )}
+                    {item.note && (
+                      <div className="text-xs mt-1 opacity-70 italic">Not: {item.note}</div>
+                    )}
                   </div>
                   <div className="flex items-center gap-3 border-2 px-2 py-1 shrink-0" style={{ borderColor: themeColor, borderRadius: borderRadiusValue }}>
-                    <button onClick={() => updateQuantity(item.product.id, -1)} className="text-xl font-bold px-2 hover:opacity-70">-</button>
+                    <button onClick={() => updateQuantity(item.id, -1)} className="text-xl font-bold px-2 hover:opacity-70">-</button>
                     <span className="font-bold text-lg w-6 text-center">{item.quantity}</span>
-                    <button onClick={() => updateQuantity(item.product.id, 1)} className="text-xl font-bold px-2 hover:opacity-70">+</button>
+                    <button onClick={() => updateQuantity(item.id, 1)} className="text-xl font-bold px-2 hover:opacity-70">+</button>
                   </div>
                 </div>
               ))}
@@ -954,6 +923,17 @@ export default function Menu() {
             </div>
           </div>
         </div>
+      )}
+
+      {selectedProductForOptions && (
+        <ProductOptionsModal
+          product={selectedProductForOptions}
+          onClose={() => setSelectedProductForOptions(null)}
+          onAddToCart={(quantity, note, selectedOptions) => {
+            addToCart(selectedProductForOptions, quantity, note, selectedOptions);
+            setSelectedProductForOptions(null);
+          }}
+        />
       )}
 
       {/* TOAST BİLDİRİMİ */}

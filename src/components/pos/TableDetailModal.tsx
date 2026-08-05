@@ -31,6 +31,24 @@ export function TableDetailModal({
   table, orders, orderItems, categories: _categories, products: _products, restaurant, restaurantAddress, menuUrl, onClose, showToast
 }: TableDetailModalProps) {
   const [activeSection, setActiveSection] = useState<'orders' | 'qr'>('orders');
+  const [isEditingLabel, setIsEditingLabel] = useState(false);
+  const [editLabelValue, setEditLabelValue] = useState(table.label || '');
+
+  useEffect(() => {
+    setEditLabelValue(table.label || '');
+    setIsEditingLabel(false);
+  }, [table]);
+
+  const handleSaveLabel = async () => {
+    const newLabel = editLabelValue.trim() === '' ? null : editLabelValue.trim();
+    const { error } = await supabase.from('tables').update({ label: newLabel }).eq('id', table.id);
+    if (error) {
+      showToast('İsim güncellenemedi: ' + error.message, 'error');
+    } else {
+      showToast('Masa ismi güncellendi!');
+      setIsEditingLabel(false);
+    }
+  };
 
   const tableOrders = orders.filter(o => o.table_id === table.id);
   const tableItems = orderItems.filter(i => tableOrders.some(o => o.id === i.order_id));
@@ -110,9 +128,33 @@ export function TableDetailModal({
         <div className="sticky top-0 bg-[#F4E4C1] border-b-4 border-brand-dark p-5 z-10">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-3xl font-bold text-brand-dark">
-                {table.label || `Masa ${table.table_number}`}
-              </h2>
+              {isEditingLabel ? (
+                <div className="flex items-center gap-2 mb-1">
+                  <input
+                    type="text"
+                    value={editLabelValue}
+                    onChange={(e) => setEditLabelValue(e.target.value)}
+                    placeholder={`Masa ${table.table_number}`}
+                    className="border-2 border-brand-dark px-2 py-1 text-2xl font-bold bg-white focus:outline-none w-48"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSaveLabel();
+                      if (e.key === 'Escape') setIsEditingLabel(false);
+                    }}
+                  />
+                  <button onClick={handleSaveLabel} className="bg-brand text-surface px-3 py-1 font-bold border-2 border-brand-dark hover:bg-brand-light hover:text-brand-dark text-xl">✓</button>
+                  <button onClick={() => setIsEditingLabel(false)} className="bg-white text-brand-dark px-3 py-1 font-bold border-2 border-brand-dark hover:bg-gray-100 text-xl">✕</button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <h2 className="text-3xl font-bold text-brand-dark">
+                    {table.label || `Masa ${table.table_number}`}
+                  </h2>
+                  <button onClick={() => setIsEditingLabel(true)} className="text-brand-dark/50 hover:text-brand-dark text-lg p-1" title="İsmi Düzenle">
+                    ✎
+                  </button>
+                </div>
+              )}
               <p className="text-sm font-bold text-brand-dark/50 mt-1">
                 {table.capacity} kişilik · {tableOrders.length} aktif sipariş
               </p>
@@ -195,7 +237,12 @@ export function TableDetailModal({
                                   <p className={`font-bold ${item.status === 'cancelled' ? 'line-through opacity-40' : 'text-brand-dark'}`}>
                                     {item.quantity}x {item.product_name}
                                   </p>
-                                  {item.note && <p className="text-xs text-brand-dark/50 italic mt-0.5">"{item.note}"</p>}
+                                  {item.selected_options && item.selected_options.length > 0 && (
+                                    <p className="text-xs text-brand-dark/70 font-bold mt-0.5">
+                                      {item.selected_options.map((o: any) => o.choiceName).join(', ')}
+                                    </p>
+                                  )}
+                                  {item.note && <p className="text-xs text-brand-dark/50 italic mt-0.5 font-bold">"{item.note}"</p>}
                                 </div>
                                 <span className="text-sm font-bold text-brand-dark/60 shrink-0">
                                   ₺{(item.unit_price * item.quantity).toFixed(0)}

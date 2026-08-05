@@ -7,25 +7,25 @@ import { useSensor, useSensors, PointerSensor, KeyboardSensor } from '@dnd-kit/c
 import type { DragEndEvent } from '@dnd-kit/core';
 import { sortableKeyboardCoordinates, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import type { DraggableData, DraggableEvent } from 'react-draggable';
+
 import { CampaignsTab } from '../components/admin/CampaignsTab';
 import { SettingsTab, DEFAULT_BG_COLOR } from '../components/admin/SettingsTab';
 import { MenuTab } from '../components/admin/MenuTab';
-import type { Restaurant, Category, Product, Campaign } from '../types/admin';
+import type { Restaurant, Category, Product, Campaign, ProductOption } from '../types/admin';
 
 // Types are imported from ../types/admin
 function SortableCategoryItem({ category, onUp, onDown, isFirst, isLast }: any) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: category.id });
   const style = { transform: CSS.Transform.toString(transform), transition };
   return (
-    <div ref={setNodeRef} style={style} className="flex items-center justify-between bg-white border-2 border-brand-dark px-4 py-2 mb-2 z-10 relative">
+    <div ref={setNodeRef} style={style} className="flex items-center justify-between bg-admin-surface border-2 border-admin-border px-4 py-2 mb-2 z-10 relative">
       <div className="flex items-center gap-3">
         <button type="button" {...attributes} {...listeners} className="cursor-grab hover:text-brand text-2xl" title="Sürükle">⣿</button>
         <span className="font-bold truncate">{category.name}</span>
       </div>
       <div className="flex gap-2 shrink-0">
-        <button type="button" onClick={() => onUp(category)} disabled={isFirst} className="w-8 h-8 flex items-center justify-center bg-brand-light border-2 border-brand-dark font-bold hover:bg-white disabled:opacity-30">▲</button>
-        <button type="button" onClick={() => onDown(category)} disabled={isLast} className="w-8 h-8 flex items-center justify-center bg-brand-light border-2 border-brand-dark font-bold hover:bg-white disabled:opacity-30">▼</button>
+        <button type="button" onClick={() => onUp(category)} disabled={isFirst} className="w-8 h-8 flex items-center justify-center bg-brand-light border-2 border-admin-border font-bold hover:bg-admin-surface disabled:opacity-30">▲</button>
+        <button type="button" onClick={() => onDown(category)} disabled={isLast} className="w-8 h-8 flex items-center justify-center bg-brand-light border-2 border-admin-border font-bold hover:bg-admin-surface disabled:opacity-30">▼</button>
       </div>
     </div>
   );
@@ -36,6 +36,12 @@ export default function Admin() {
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{isOpen: boolean, message: string, onConfirm: () => void}>({ isOpen: false, message: '', onConfirm: () => {} });
+  const [adminTheme, setAdminTheme] = useState(localStorage.getItem('adminTheme') || 'classic');
+  
+  useEffect(() => {
+    document.documentElement.setAttribute('data-admin-theme', adminTheme);
+    localStorage.setItem('adminTheme', adminTheme);
+  }, [adminTheme]);
 
   type ThemeState = { themeColor: string, themeFont: string, fontSize: string, bgColor: string, bgImageUrl: string, buttonShape: string, layoutStyle: string, headerStyle: string, navStyle: string, cardBgColor: string };
   const [settingsHistory, setSettingsHistory] = useState<ThemeState[]>([]);
@@ -69,7 +75,7 @@ export default function Admin() {
   const [bgImageUrl, setBgImageUrl] = useState('');
   const [bgUploadFile, setBgUploadFile] = useState<File | null>(null);
   const [buttonShape, setButtonShape] = useState('square');
-  const [layoutStyle, setLayoutStyle] = useState<'list' | 'grid' | 'canvas'>('list');
+  const [layoutStyle, setLayoutStyle] = useState<'list' | 'grid'>('list');
   const [headerStyle, setHeaderStyle] = useState<'center' | 'left' | 'banner'>('center');
   const [navStyle, setNavStyle] = useState<'scroll' | 'tabs'>('scroll');
   const [cardBgColor, setCardBgColor] = useState('#FFFFFF');
@@ -88,6 +94,7 @@ export default function Admin() {
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [productOptions, setProductOptions] = useState<ProductOption[]>([]);
 
   // ARAMA, FİLTRELEME VE TOPLU İŞLEM
   const [searchTerm, setSearchTerm] = useState('');
@@ -429,12 +436,7 @@ export default function Admin() {
     }
   };
 
-  const handleCanvasDragStop = (_e: DraggableEvent, data: DraggableData, category: Category) => {
-    const newX = data.x;
-    const newY = data.y;
-    setCategories(categories.map(c => c.id === category.id ? { ...c, pos_x: newX, pos_y: newY } : c));
-    supabase.from('categories').update({ pos_x: newX, pos_y: newY }).eq('id', category.id).then();
-  };
+
 
   const handleSubmitProduct = async (e: React.FormEvent) => {
     e.preventDefault(); setLoading(true);
@@ -453,7 +455,8 @@ export default function Admin() {
         price: parseFloat(productPrice), 
         category_id: selectedCategoryId, 
         image_url: imageUrl,
-        sort_order: product?.sort_order 
+        sort_order: product?.sort_order,
+        options: productOptions
       }).eq('id', editingProductId).select().single();
 
       if (error) {
@@ -471,7 +474,8 @@ export default function Admin() {
         price: parseFloat(productPrice), 
         category_id: selectedCategoryId, 
         image_url: imageUrl, 
-        sort_order: nextOrder 
+        sort_order: nextOrder,
+        options: productOptions
       }]).select().single();
       
       if (error) {
@@ -510,10 +514,12 @@ export default function Admin() {
   const handleEditClick = (product: Product) => {
     setEditingProductId(product.id); setProductName(product.name); setProductDesc(product.description || '');
     setProductPrice(product.price.toString()); setSelectedCategoryId(product.category_id); setImageFile(null);
+    setProductOptions(product.options || []);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
   const resetProductForm = () => {
     setEditingProductId(null); setProductName(''); setProductDesc(''); setProductPrice(''); setImageFile(null);
+    setProductOptions([]);
     const fileInput = document.getElementById('imageInput') as HTMLInputElement; if (fileInput) fileInput.value = '';
   };
   
@@ -663,22 +669,39 @@ export default function Admin() {
     });
   };
 
+  const renderThemePicker = () => (
+    <select 
+      value={adminTheme} 
+      onChange={e => setAdminTheme(e.target.value)}
+      className="bg-admin-surface text-admin-text border-2 border-admin-border px-3 py-2 font-bold text-sm outline-none cursor-pointer hover:bg-admin-sidebar shadow-admin-pixel-sm transition-colors uppercase"
+    >
+      <option value="classic">Bej (Varsayılan)</option>
+      <option value="modern-light">Gündüz (Aydınlık)</option>
+      <option value="modern-dark">Gece (Karanlık)</option>
+      <option value="nord">Kurumsal (Zarif)</option>
+      <option value="dracula">Derin Gece (Kontrast)</option>
+    </select>
+  );
+
   // --- DASHBOARD ---
   if (activeTab === 'dashboard') {
     return (
       <>
-      <div className="min-h-screen bg-surface p-10 font-pixel text-ink">
+      <div className="min-h-screen bg-admin-bg p-10 font-pixel text-admin-text">
         <div className="max-w-6xl mx-auto">
-          <div className="flex justify-between items-end border-b-4 border-brand-dark pb-6 mb-10">
-            <h1 className="text-5xl font-bold text-brand-dark uppercase">Kontrol Paneli</h1>
-            <button onClick={handleLogout} className="bg-[#d97777] text-surface px-6 py-2 border-2 border-brand-dark shadow-pixel font-bold hover:bg-[#e08d8d]">Çıkış Yap</button>
+          <div className="flex justify-between items-end border-b-4 border-admin-border pb-6 mb-10">
+            <h1 className="text-5xl font-bold text-admin-text uppercase">Kontrol Paneli</h1>
+            <div className="flex items-center gap-4">
+              {renderThemePicker()}
+              <button onClick={handleLogout} className="bg-admin-danger text-admin-danger-text px-6 py-2 border-2 border-admin-border shadow-admin-pixel font-bold hover:bg-admin-danger-hover">Çıkış Yap</button>
+            </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {myRestaurants.map(rest => (
-              <div key={rest.id} onClick={() => handleEnterRestaurant(rest)} className="relative bg-white border-4 border-brand-dark p-6 shadow-pixel cursor-pointer hover:-translate-y-2 flex flex-col items-center text-center transition-transform group">
+              <div key={rest.id} onClick={() => handleEnterRestaurant(rest)} className="relative bg-admin-surface border-4 border-admin-border p-6 shadow-admin-pixel cursor-pointer hover:-translate-y-2 flex flex-col items-center text-center transition-transform group">
                 <button 
                   onClick={(e) => handleDeleteRestaurant(e, rest.id, rest.name)}
-                  className="absolute top-2 right-2 bg-[#d97777] text-white border-2 border-brand-dark w-8 h-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#c25a5a] shadow-pixel-sm font-bold"
+                  className="absolute top-2 right-2 bg-admin-danger text-admin-danger-text border-2 border-admin-border w-8 h-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-admin-danger-hover shadow-admin-pixel-sm font-bold"
                   title="Şubeyi Sil"
                 >
                   ✕
@@ -687,14 +710,14 @@ export default function Admin() {
                   {rest.logo_url ? <img src={rest.logo_url} loading="lazy" className="w-full h-full object-cover" /> : rest.name.charAt(0)}
                 </div>
                 <h2 className="text-3xl font-bold uppercase mb-2">{rest.name}</h2>
-                <p className="bg-brand-light px-3 py-1 border-2 border-brand-dark text-sm font-bold">Yönetime Gir ➔</p>
+                <p className="bg-brand-light px-3 py-1 border-2 border-admin-border text-sm font-bold">Yönetime Gir ➔</p>
               </div>
             ))}
-            <div className="bg-[#e8f4e1] border-4 border-dashed border-[#8fb38a] p-6 flex flex-col justify-center">
+            <div className="bg-admin-primary-faint border-4 border-dashed border-admin-primary p-6 flex flex-col justify-center">
               <h2 className="text-2xl font-bold uppercase mb-4 text-center">Yeni Şube Ekle</h2>
               <form onSubmit={handleCreateRestaurant} className="space-y-4">
-                <input type="text" required value={newRestaurantName} onChange={(e) => setNewRestaurantName(e.target.value)} placeholder="Şube Adı" className="w-full px-4 py-3 border-2 border-brand-dark focus:outline-none" />
-                <button type="submit" className="w-full bg-[#8fb38a] text-brand-dark border-2 border-brand-dark px-4 py-3 font-bold hover:bg-[#a3c79e] shadow-pixel">+ OLUŞTUR</button>
+                <input type="text" required value={newRestaurantName} onChange={(e) => setNewRestaurantName(e.target.value)} placeholder="Şube Adı" className="w-full px-4 py-3 border-2 border-admin-border focus:outline-none" />
+                <button type="submit" className="w-full bg-admin-primary text-admin-text border-2 border-admin-border px-4 py-3 font-bold hover:bg-admin-primary-hover shadow-admin-pixel">+ OLUŞTUR</button>
               </form>
             </div>
           </div>
@@ -704,26 +727,26 @@ export default function Admin() {
       {/* CONFIRM DIALOG */}
       {confirmDialog.isOpen && (
         <div className="fixed inset-0 bg-brand-dark/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
-          <div className="bg-surface border-4 border-brand-dark shadow-pixel p-8 max-w-lg w-full text-center animate-scale-in flex flex-col items-center">
-            <div className="w-20 h-20 bg-[#fde8e8] border-4 border-[#d97777] rounded-full flex items-center justify-center mb-6 shadow-pixel-sm">
+          <div className="bg-admin-surface border-4 border-admin-border shadow-admin-pixel p-8 max-w-lg w-full text-center animate-scale-in flex flex-col items-center">
+            <div className="w-20 h-20 bg-admin-danger-faint border-4 border-admin-danger rounded-full flex items-center justify-center mb-6 shadow-admin-pixel-sm">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-[#d97777]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                 <path strokeLinecap="square" strokeLinejoin="miter" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
               </svg>
             </div>
-            <h3 className="text-2xl font-bold mb-4 text-brand-dark leading-snug">{confirmDialog.message.split('?')[0]}?</h3>
+            <h3 className="text-2xl font-bold mb-4 text-admin-text leading-snug">{confirmDialog.message.split('?')[0]}?</h3>
             {confirmDialog.message.split('?')[1] && (
-              <p className="text-brand-dark/70 font-bold mb-8 text-lg">{confirmDialog.message.split('?')[1]}</p>
+              <p className="text-admin-text/70 font-bold mb-8 text-lg">{confirmDialog.message.split('?')[1]}</p>
             )}
             <div className="flex gap-4 justify-center w-full">
               <button 
                 onClick={() => setConfirmDialog({ ...confirmDialog, isOpen: false })} 
-                className="flex-1 px-6 py-4 bg-white text-brand-dark border-4 border-brand-dark font-bold hover:bg-gray-50 transition-colors shadow-pixel-sm text-lg"
+                className="flex-1 px-6 py-4 bg-admin-surface text-admin-text border-4 border-admin-border font-bold hover:bg-admin-sidebar-hover transition-colors shadow-admin-pixel-sm text-lg"
               >
                 Vazgeç
               </button>
               <button 
                 onClick={confirmDialog.onConfirm} 
-                className="flex-1 px-6 py-4 bg-[#d97777] text-white border-4 border-brand-dark font-bold hover:bg-[#c25a5a] shadow-pixel-sm transition-transform hover:-translate-y-1 text-lg"
+                className="flex-1 px-6 py-4 bg-admin-danger text-admin-danger-text border-4 border-admin-border font-bold hover:bg-admin-danger-hover shadow-admin-pixel-sm transition-transform hover:-translate-y-1 text-lg"
               >
                 Evet, Sil
               </button>
@@ -735,7 +758,7 @@ export default function Admin() {
       {/* TOAST NOTIFICATIONS */}
       {toast && (
         <div className="fixed bottom-6 right-6 z-50 animate-bounce-in">
-          <div className={`px-6 py-4 border-4 shadow-pixel font-bold text-lg text-white flex items-center gap-3 ${toast.type === 'success' ? 'bg-[#8fb38a] border-[#5b7a57]' : 'bg-[#d97777] border-[#8a3c3c]'}`}>
+          <div className={`px-6 py-4 border-4 shadow-admin-pixel font-bold text-lg text-admin-bg flex items-center gap-3 ${toast.type === 'success' ? 'bg-admin-primary border-admin-primary' : 'bg-admin-danger border-admin-danger'}`}>
             <span>{toast.type === 'success' ? '✓' : '✕'}</span>
             <span>{toast.message}</span>
           </div>
@@ -746,42 +769,43 @@ export default function Admin() {
 }
 
   return (
-    <div className="min-h-screen bg-surface flex font-pixel text-ink text-xl tracking-wide relative">
+    <div className="min-h-screen bg-admin-bg flex font-pixel text-admin-text text-xl tracking-wide relative">
 
       {/* HOVER SIDEBAR */}
-      <aside className="group fixed top-0 left-0 h-screen w-12 hover:w-64 bg-[#F4E4C1] border-r-4 border-brand-dark transition-all duration-300 ease-in-out z-50 overflow-hidden shadow-[4px_0_0_rgba(26,26,26,0.1)]">
+      <aside className="group fixed top-0 left-0 h-screen w-12 hover:w-64 bg-admin-bg border-r-4 border-admin-border transition-all duration-300 ease-in-out z-50 overflow-hidden shadow-[4px_0_0_rgba(26,26,26,0.1)]">
         <div className="absolute inset-0 w-12 flex items-center justify-center group-hover:opacity-0 transition-opacity duration-200">
-          <span className="font-bold text-brand-dark -rotate-90 whitespace-nowrap tracking-[0.3em] text-xl">MENÜ &gt;</span>
+          <span className="font-bold text-admin-text -rotate-90 whitespace-nowrap tracking-[0.3em] text-xl">MENÜ &gt;</span>
         </div>
         <div className="w-64 p-6 h-full flex flex-col opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-75">
-          <div className="mb-8 border-b-4 border-brand-dark pb-4">
-            <h2 className="text-2xl font-bold text-brand-dark uppercase truncate">{selectedRestaurant?.name}</h2>
-            <button onClick={() => setActiveTab('dashboard')} className="mt-2 text-sm text-brand underline hover:text-brand-dark">← Tüm Mekanlarıma Dön</button>
+          <div className="mb-8 border-b-4 border-admin-border pb-4">
+            <h2 className="text-2xl font-bold text-admin-text uppercase truncate">{selectedRestaurant?.name}</h2>
+            <button onClick={() => setActiveTab('dashboard')} className="mt-2 text-sm text-brand underline hover:text-admin-text">← Tüm Mekanlarıma Dön</button>
           </div>
           <nav className="flex flex-col gap-3 flex-grow">
-            <button onClick={() => setActiveTab('menu')} className={`text-left px-4 py-3 border-2 border-brand-dark transition-all ${activeTab === 'menu' ? 'bg-brand text-surface shadow-pixel' : 'bg-brand-light text-brand-dark hover:bg-white'}`}>Envanter (Menü)</button>
-            <button onClick={() => setActiveTab('campaigns')} className={`text-left px-4 py-3 border-2 border-brand-dark transition-all ${activeTab === 'campaigns' ? 'bg-brand text-surface shadow-pixel' : 'bg-brand-light text-brand-dark hover:bg-white'}`}>Kampanya Düzenle 🏷️</button>
-            <button onClick={() => setActiveTab('about')} className={`text-left px-4 py-3 border-2 border-brand-dark transition-all ${activeTab === 'about' ? 'bg-brand text-surface shadow-pixel' : 'bg-brand-light text-brand-dark hover:bg-white'}`}>Restoran Hakkında</button>
-            <button onClick={() => setActiveTab('settings')} className={`text-left px-4 py-3 border-2 border-brand-dark transition-all ${activeTab === 'settings' ? 'bg-brand text-surface shadow-pixel' : 'bg-brand-light text-brand-dark hover:bg-white'}`}>Görünüm Ayarları</button>
+            <button onClick={() => setActiveTab('menu')} className={`text-left px-4 py-3 border-2 border-admin-border transition-all ${activeTab === 'menu' ? 'bg-brand text-surface shadow-admin-pixel' : 'bg-brand-light text-admin-text hover:bg-admin-surface'}`}>Envanter (Menü)</button>
+            <button onClick={() => setActiveTab('campaigns')} className={`text-left px-4 py-3 border-2 border-admin-border transition-all ${activeTab === 'campaigns' ? 'bg-brand text-surface shadow-admin-pixel' : 'bg-brand-light text-admin-text hover:bg-admin-surface'}`}>Kampanya Düzenle 🏷️</button>
+            <button onClick={() => setActiveTab('about')} className={`text-left px-4 py-3 border-2 border-admin-border transition-all ${activeTab === 'about' ? 'bg-brand text-surface shadow-admin-pixel' : 'bg-brand-light text-admin-text hover:bg-admin-surface'}`}>Restoran Hakkında</button>
+            <button onClick={() => setActiveTab('settings')} className={`text-left px-4 py-3 border-2 border-admin-border transition-all ${activeTab === 'settings' ? 'bg-brand text-surface shadow-admin-pixel' : 'bg-brand-light text-admin-text hover:bg-admin-surface'}`}>Görünüm Ayarları</button>
           </nav>
-          <div className="mt-auto pt-6 border-t-4 border-brand-dark space-y-2">
+          <div className="mt-auto pt-6 border-t-4 border-admin-border space-y-3">
+            {renderThemePicker()}
             {selectedRestaurant && (
               <>
                 <button
                   onClick={() => window.open(`/pos/${selectedRestaurant.id}`, '_blank')}
-                  className="w-full px-2 py-3 bg-brand text-surface border-2 border-brand-dark font-bold uppercase text-sm hover:opacity-90 active:translate-y-1 shadow-pixel-sm"
+                  className="w-full px-2 py-3 bg-brand text-surface border-2 border-admin-border font-bold uppercase text-sm hover:opacity-90 active:translate-y-1 shadow-admin-pixel-sm"
                 >
                   🏪 Masa & Sipariş Yönetimi
                 </button>
                 <button
                   onClick={() => navigate(`/qr/${selectedRestaurant.id}`)}
-                  className="w-full px-2 py-2 bg-brand-light text-brand-dark border-2 border-brand-dark font-bold uppercase text-sm hover:bg-white active:translate-y-1 shadow-pixel-sm"
+                  className="w-full px-2 py-2 bg-brand-light text-admin-text border-2 border-admin-border font-bold uppercase text-sm hover:bg-admin-surface active:translate-y-1 shadow-admin-pixel-sm"
                 >
                   QR Özelleştir ✦
                 </button>
                 <button
                   onClick={() => window.open(menuLink, '_blank')}
-                  className="w-full px-2 py-2 bg-[#8fb38a] border-2 border-brand-dark font-bold uppercase text-sm hover:bg-[#a3c79e] active:translate-y-1 shadow-pixel-sm"
+                  className="w-full px-2 py-2 bg-admin-primary border-2 border-admin-border font-bold uppercase text-sm hover:bg-admin-primary-hover active:translate-y-1 shadow-admin-pixel-sm"
                 >
                   Menüyü Gör ↗
                 </button>
@@ -792,7 +816,7 @@ export default function Admin() {
       </aside>
 
       {/* ANA İÇERİK */}
-      <main className="flex-1 p-8 ml-12 overflow-y-auto h-screen bg-surface">
+      <main className="flex-1 p-8 ml-12 overflow-y-auto h-screen bg-admin-bg">
 
         {/* ===== KAMPANYA DÜZENLE ===== */}
         {activeTab === 'campaigns' && selectedRestaurant && (
@@ -811,42 +835,42 @@ export default function Admin() {
           <div className="max-w-2xl mx-auto">
             <header className="mb-8">
               <h1 className="text-4xl font-bold uppercase mb-2">Restoran Hakkında</h1>
-              <p className="text-lg text-brand-dark/60 font-bold">Bu bilgiler müşteri menüsünde logo altında görünür.</p>
+              <p className="text-lg text-admin-text/60 font-bold">Bu bilgiler müşteri menüsünde logo altında görünür.</p>
             </header>
-            <form onSubmit={handleUpdateAbout} className="bg-[#F4E4C1] border-4 border-brand-dark shadow-pixel p-8 space-y-6">
+            <form onSubmit={handleUpdateAbout} className="bg-admin-bg border-4 border-admin-border shadow-admin-pixel p-8 space-y-6">
               <div>
                 <label className="block font-bold mb-2 text-2xl">📋 Kısa Açıklama</label>
-                <textarea rows={5} value={restaurantDescription} onChange={(e) => setRestaurantDescription(e.target.value)} placeholder="Örn: 2015'ten beri İstanbul'un kalbinde, evsahibi sıcaklığıyla hizmet veriyoruz..." className="w-full px-4 py-3 border-2 border-brand-dark bg-white focus:outline-none resize-none text-base leading-relaxed" />
-                <p className="text-sm text-brand-dark/60 mt-1 font-bold">{restaurantDescription.length} karakter</p>
+                <textarea rows={5} value={restaurantDescription} onChange={(e) => setRestaurantDescription(e.target.value)} placeholder="Örn: 2015'ten beri İstanbul'un kalbinde, evsahibi sıcaklığıyla hizmet veriyoruz..." className="w-full px-4 py-3 border-2 border-admin-border bg-admin-surface focus:outline-none resize-none text-base leading-relaxed" />
+                <p className="text-sm text-admin-text/60 mt-1 font-bold">{restaurantDescription.length} karakter</p>
               </div>
               <div>
                 <label className="block font-bold mb-2 text-2xl">📍 Adres / Konum</label>
-                <input type="text" value={restaurantAddress} onChange={(e) => setRestaurantAddress(e.target.value)} placeholder="Örn: Atatürk Cad. No:12, Kadıköy / İstanbul" className="w-full px-4 py-3 border-2 border-brand-dark bg-white focus:outline-none text-base" />
-                <p className="text-sm text-brand-dark/60 mt-1 font-bold">Müşteri menüsünde tıklanabilir Google Haritalar linki olarak gösterilecek.</p>
+                <input type="text" value={restaurantAddress} onChange={(e) => setRestaurantAddress(e.target.value)} placeholder="Örn: Atatürk Cad. No:12, Kadıköy / İstanbul" className="w-full px-4 py-3 border-2 border-admin-border bg-admin-surface focus:outline-none text-base" />
+                <p className="text-sm text-admin-text/60 mt-1 font-bold">Müşteri menüsünde tıklanabilir Google Haritalar linki olarak gösterilecek.</p>
                 {restaurantAddress && (
-                  <div className="mt-3 flex items-center gap-3 bg-white border-2 border-[#8fb38a] px-4 py-3">
+                  <div className="mt-3 flex items-center gap-3 bg-admin-surface border-2 border-admin-primary px-4 py-3">
                     <span className="text-2xl">📍</span>
                     <div className="flex-1">
-                      <p className="font-bold text-brand-dark text-base truncate">{restaurantAddress}</p>
+                      <p className="font-bold text-admin-text text-base truncate">{restaurantAddress}</p>
                       <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(restaurantAddress)}`} target="_blank" rel="noopener noreferrer" className="text-sm text-[#5b7a57] underline font-bold">Google Haritalar'da Önizle ↗</a>
                     </div>
                   </div>
                 )}
               </div>
               {(restaurantDescription || restaurantAddress) && (
-                <div className="border-t-2 border-brand-dark pt-6">
-                  <p className="font-bold text-brand-dark mb-3 uppercase text-lg">Menüde Görünüm Önizlemesi:</p>
-                  <div className="bg-white/80 border-2 border-brand-dark p-4 space-y-3 text-center">
-                    {restaurantDescription && <p className="text-base leading-relaxed italic opacity-90 text-brand-dark">{restaurantDescription}</p>}
+                <div className="border-t-2 border-admin-border pt-6">
+                  <p className="font-bold text-admin-text mb-3 uppercase text-lg">Menüde Görünüm Önizlemesi:</p>
+                  <div className="bg-admin-surface/80 border-2 border-admin-border p-4 space-y-3 text-center">
+                    {restaurantDescription && <p className="text-base leading-relaxed italic opacity-90 text-admin-text">{restaurantDescription}</p>}
                     {restaurantAddress && (
-                      <div className="inline-flex items-center gap-2 px-3 py-2 border-2 border-brand-dark font-bold text-base text-brand-dark bg-brand-light">
+                      <div className="inline-flex items-center gap-2 px-3 py-2 border-2 border-admin-border font-bold text-base text-admin-text bg-brand-light">
                         <span>📍</span><span>{restaurantAddress}</span><span className="text-sm opacity-70">↗</span>
                       </div>
                     )}
                   </div>
                 </div>
               )}
-              <button type="submit" disabled={loading} className="w-full bg-[#8fb38a] text-brand-dark border-2 border-brand-dark px-6 py-4 shadow-pixel font-bold text-2xl hover:bg-[#a3c79e]">
+              <button type="submit" disabled={loading} className="w-full bg-admin-primary text-admin-text border-2 border-admin-border px-6 py-4 shadow-admin-pixel font-bold text-2xl hover:bg-admin-primary-hover">
                 {loading ? 'KAYDEDİLİYOR...' : 'BİLGİLERİ KAYDET'}
               </button>
             </form>
@@ -889,7 +913,6 @@ export default function Admin() {
             sortedCategories={sortedCategories}
             layoutStyle={layoutStyle}
             categories={categories}
-            handleCanvasDragStop={handleCanvasDragStop}
             sensors={sensors}
             handleDragEndCategories={handleDragEndCategories}
             SortableCategoryItem={SortableCategoryItem}
@@ -919,6 +942,7 @@ export default function Admin() {
             handleEditClick={handleEditClick}
             handleDeleteProduct={handleDeleteProduct}
             handleInlinePriceUpdate={handleInlinePriceUpdate}
+            productOptions={productOptions} setProductOptions={setProductOptions}
           />
         )}
       </main>
@@ -926,26 +950,26 @@ export default function Admin() {
       {/* CONFIRM DIALOG */}
       {confirmDialog.isOpen && (
         <div className="fixed inset-0 bg-brand-dark/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
-          <div className="bg-surface border-4 border-brand-dark shadow-pixel p-8 max-w-lg w-full text-center animate-scale-in flex flex-col items-center">
-            <div className="w-20 h-20 bg-[#fde8e8] border-4 border-[#d97777] rounded-full flex items-center justify-center mb-6 shadow-pixel-sm">
+          <div className="bg-admin-surface border-4 border-admin-border shadow-admin-pixel p-8 max-w-lg w-full text-center animate-scale-in flex flex-col items-center">
+            <div className="w-20 h-20 bg-admin-danger-faint border-4 border-admin-danger rounded-full flex items-center justify-center mb-6 shadow-admin-pixel-sm">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-[#d97777]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                 <path strokeLinecap="square" strokeLinejoin="miter" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
               </svg>
             </div>
-            <h3 className="text-2xl font-bold mb-4 text-brand-dark leading-snug">{confirmDialog.message.split('?')[0]}?</h3>
+            <h3 className="text-2xl font-bold mb-4 text-admin-text leading-snug">{confirmDialog.message.split('?')[0]}?</h3>
             {confirmDialog.message.split('?')[1] && (
-              <p className="text-brand-dark/70 font-bold mb-8 text-lg">{confirmDialog.message.split('?')[1]}</p>
+              <p className="text-admin-text/70 font-bold mb-8 text-lg">{confirmDialog.message.split('?')[1]}</p>
             )}
             <div className="flex gap-4 justify-center w-full">
               <button 
                 onClick={() => setConfirmDialog({ ...confirmDialog, isOpen: false })} 
-                className="flex-1 px-6 py-4 bg-white text-brand-dark border-4 border-brand-dark font-bold hover:bg-gray-50 transition-colors shadow-pixel-sm text-lg"
+                className="flex-1 px-6 py-4 bg-admin-surface text-admin-text border-4 border-admin-border font-bold hover:bg-admin-sidebar-hover transition-colors shadow-admin-pixel-sm text-lg"
               >
                 Vazgeç
               </button>
               <button 
                 onClick={confirmDialog.onConfirm} 
-                className="flex-1 px-6 py-4 bg-[#d97777] text-white border-4 border-brand-dark font-bold hover:bg-[#c25a5a] shadow-pixel-sm transition-transform hover:-translate-y-1 text-lg"
+                className="flex-1 px-6 py-4 bg-admin-danger text-admin-danger-text border-4 border-admin-border font-bold hover:bg-admin-danger-hover shadow-admin-pixel-sm transition-transform hover:-translate-y-1 text-lg"
               >
                 Evet, Sil
               </button>
@@ -957,7 +981,7 @@ export default function Admin() {
       {/* TOAST NOTIFICATIONS */}
       {toast && (
         <div className="fixed bottom-6 right-6 z-50 animate-bounce-in">
-          <div className={`px-6 py-4 border-4 shadow-pixel font-bold text-lg text-white flex items-center gap-3 ${toast.type === 'success' ? 'bg-[#8fb38a] border-[#5b7a57]' : 'bg-[#d97777] border-[#8a3c3c]'}`}>
+          <div className={`px-6 py-4 border-4 shadow-admin-pixel font-bold text-lg text-admin-bg flex items-center gap-3 ${toast.type === 'success' ? 'bg-admin-primary border-admin-primary' : 'bg-admin-danger border-admin-danger'}`}>
             <span>{toast.type === 'success' ? '✓' : '✕'}</span>
             <span>{toast.message}</span>
           </div>

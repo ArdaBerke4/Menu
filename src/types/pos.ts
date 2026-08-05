@@ -20,6 +20,12 @@ export interface Order {
   updated_at?: string;
 }
 
+export interface SelectedOption {
+  groupName: string;
+  choiceName: string;
+  price: number;
+}
+
 export interface OrderItem {
   id: string;
   order_id: string;
@@ -29,5 +35,6 @@ export interface OrderItem {
   unit_price: number;
   status: 'pending' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
   note?: string;
+  selected_options?: SelectedOption[];
   created_at?: string;
 }
