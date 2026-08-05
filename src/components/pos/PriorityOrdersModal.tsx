@@ -78,10 +78,10 @@ export function PriorityOrdersModal({
                 <div key={order?.id || firstItem.id} className="bg-white border-2 border-brand-dark p-4 flex flex-col gap-3 shadow-pixel-sm">
                   <div className="flex items-start justify-between border-b-2 border-brand-dark/10 pb-2">
                     <div>
-                      <span className="bg-brand-dark text-white text-xs px-2 py-1 font-bold">
+                      <span className="bg-brand-dark text-white text-lg px-3 py-1 font-bold shadow-pixel-sm">
                         {table?.label || `Masa ${table?.table_number}`}
                       </span>
-                      <span className="text-brand-dark/50 text-xs font-bold ml-2">
+                      <span className="text-brand-dark/50 text-sm font-bold ml-3">
                         {timeString}
                       </span>
                     </div>
