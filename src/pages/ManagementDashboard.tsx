@@ -32,6 +32,16 @@ export default function ManagementDashboard() {
     setTimeout(() => setToast(null), 3000);
   };
 
+  // Aktif masanın güncel kalmasını sağla (İsim değişimi vb. realtime güncellemeler için)
+  useEffect(() => {
+    if (selectedTable) {
+      const updatedTable = tables.find(t => t.id === selectedTable.id);
+      if (updatedTable && updatedTable.label !== selectedTable.label) {
+        setSelectedTable(updatedTable);
+      }
+    }
+  }, [tables, selectedTable]);
+
   // Restoran bilgilerini çek
   useEffect(() => {
     const load = async () => {

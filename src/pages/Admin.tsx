@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { slugify } from '../utils/slugify';
 import * as XLSX from 'xlsx';
+import Papa from 'papaparse';
 import { supabase } from '../supabase';
 import { useNavigate } from 'react-router-dom';
 import { useSensor, useSensors, PointerSensor, KeyboardSensor } from '@dnd-kit/core';
@@ -14,7 +15,7 @@ import { MenuTab } from '../components/admin/MenuTab';
 import type { Restaurant, Category, Product, Campaign, ProductOption } from '../types/admin';
 
 // Types are imported from ../types/admin
-function SortableCategoryItem({ category, onUp, onDown, isFirst, isLast }: any) {
+function SortableCategoryItem({ category, onUp, onDown, isFirst, isLast, onDelete }: any) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: category.id });
   const style = { transform: CSS.Transform.toString(transform), transition };
   return (
@@ -26,6 +27,7 @@ function SortableCategoryItem({ category, onUp, onDown, isFirst, isLast }: any) 
       <div className="flex gap-2 shrink-0">
         <button type="button" onClick={() => onUp(category)} disabled={isFirst} className="w-8 h-8 flex items-center justify-center bg-brand-light border-2 border-admin-border font-bold hover:bg-admin-surface disabled:opacity-30">▲</button>
         <button type="button" onClick={() => onDown(category)} disabled={isLast} className="w-8 h-8 flex items-center justify-center bg-brand-light border-2 border-admin-border font-bold hover:bg-admin-surface disabled:opacity-30">▼</button>
+        <button type="button" onClick={() => onDelete(category.id)} className="w-8 h-8 flex items-center justify-center bg-admin-danger text-surface border-2 border-admin-border font-bold hover:opacity-80" title="Sil">X</button>
       </div>
     </div>
   );
@@ -320,95 +322,154 @@ export default function Admin() {
 
     setLoading(true);
     try {
-      const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data, { type: 'array' });
-      const firstSheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[firstSheetName];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet);
+      let jsonData: any[] = [];
+      if (file.name.toLowerCase().endsWith('.csv')) {
+        const text = await file.text();
+        const result = Papa.parse(text, { header: true, skipEmptyLines: true });
+        jsonData = result.data as any[];
+      } else {
+        const data = await file.arrayBuffer();
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        jsonData = XLSX.utils.sheet_to_json(worksheet);
+      }
 
       if (jsonData.length === 0) {
         showToast("Excel dosyası boş.", "error");
         return;
       }
 
+      const excelCategories: any[] = [];
+      for (const row of jsonData as any[]) {
+        const catName = String(row['Kategori'] || '').trim();
+        const catId = row['Kategori ID'] ? String(row['Kategori ID']).trim() : null;
+        if (catName) {
+          if (!excelCategories.find(c => c.name.toLowerCase() === catName.toLowerCase() || (catId && c.id === catId))) {
+            excelCategories.push({ id: catId, name: catName });
+          }
+        }
+      }
+
       const newCategoriesMap: Record<string, string> = {}; 
-      const productsToInsert = [];
       let newCategoriesCount = 0;
-
-      const categoryNames = [...new Set(jsonData.map((row: any) => row['Kategori']).filter(Boolean))];
-
       let currentMaxSortOrder = categories.length > 0 ? Math.max(...categories.map(c => c.sort_order ?? 0)) : -1;
-      
-      for (const catName of categoryNames) {
-        const catNameStr = String(catName).trim();
-        const existingCat = categories.find(c => c.name.toLowerCase() === catNameStr.toLowerCase());
+
+      // 1. Kategorileri İşle
+      for (const cat of excelCategories) {
+        let existingCat = null;
+        if (cat.id) {
+          existingCat = categories.find(c => c.id === cat.id);
+        }
+        if (!existingCat) {
+          existingCat = categories.find(c => c.name.toLowerCase() === cat.name.toLowerCase());
+        }
+
         if (existingCat) {
-          newCategoriesMap[catNameStr] = existingCat.id;
+          newCategoriesMap[cat.name] = existingCat.id;
         } else {
           currentMaxSortOrder += 1;
           const { data: catData, error: catError } = await supabase
             .from('categories')
-            .insert([{ name: catNameStr, restaurant_id: selectedRestaurant.id, sort_order: currentMaxSortOrder }])
+            .insert([{ name: cat.name, restaurant_id: selectedRestaurant.id, sort_order: currentMaxSortOrder }])
             .select()
             .single();
           
           if (catData && !catError) {
-            newCategoriesMap[catNameStr] = catData.id;
+            newCategoriesMap[cat.name] = catData.id;
             setCategories(prev => [...prev, catData]);
             newCategoriesCount++;
           }
         }
       }
 
+      // 2. Ürünleri İşle
+      const productsToInsert = [];
+      const productsToUpdate: any[] = [];
+      let updatedProductsCount = 0;
+
       let maxProductSortOrder = products.length > 0 ? Math.max(...products.map(p => p.sort_order ?? 0)) : -1;
 
       for (const row of jsonData as any[]) {
         const catName = String(row['Kategori'] || '').trim();
         const prodName = String(row['Ürün Adı'] || '').trim();
+        const prodId = row['Ürün ID'] ? String(row['Ürün ID']).trim() : null;
         let priceStr = row['Fiyat'];
         const desc = String(row['Açıklama'] || '').trim();
 
         if (!catName || !prodName || priceStr === undefined) continue;
 
-        // Extract numbers and clean
         if (typeof priceStr === 'string') {
           priceStr = priceStr.replace(',', '.').replace(/[^0-9.]/g, '');
         }
         const price = parseFloat(priceStr);
         if (isNaN(price)) continue;
 
-        // Match case-insensitively using the newCategoriesMap we built above
         const matchingCatName = Object.keys(newCategoriesMap).find(k => k.toLowerCase() === catName.toLowerCase());
         const catId = matchingCatName ? newCategoriesMap[matchingCatName] : null;
 
         if (!catId) continue;
 
+        if (prodId) {
+          const existingProd = products.find(p => p.id === prodId);
+          if (existingProd) {
+            productsToUpdate.push({
+              id: prodId,
+              category_id: catId,
+              name: prodName,
+              description: desc,
+              price: price
+            });
+            updatedProductsCount++;
+            continue;
+          }
+        }
+
         maxProductSortOrder += 1;
         productsToInsert.push({
+          restaurant_id: selectedRestaurant.id,
           category_id: catId,
           name: prodName,
-          description: desc,
           price: price,
+          description: desc,
+          sort_order: maxProductSortOrder,
           image_url: null,
-          sort_order: maxProductSortOrder
+          options: []
         });
       }
 
+      // 3. Veritabanına Yaz
+      if (productsToUpdate.length > 0) {
+        for (const p of productsToUpdate) {
+          await supabase.from('products').update({
+            category_id: p.category_id,
+            name: p.name,
+            description: p.description,
+            price: p.price
+          }).eq('id', p.id);
+        }
+      }
+
       if (productsToInsert.length > 0) {
-        const { data: prodData, error: prodError } = await supabase
+        const { error: prodError } = await supabase
           .from('products')
           .insert(productsToInsert)
           .select();
 
-        if (prodData && !prodError) {
-          setProducts(prev => [...prev, ...prodData]);
-          showToast(`${newCategoriesCount} yeni kategori ve ${productsToInsert.length} ürün eklendi!`);
-        } else {
-          showToast("Ürünler eklenirken hata oluştu.", "error");
+        if (prodError) {
+          showToast("Yeni ürünler eklenirken hata oluştu.", "error");
         }
-      } else {
-        showToast("Eklenecek geçerli ürün bulunamadı. Sütun isimlerini kontrol edin (Kategori, Ürün Adı, Fiyat).", "error");
       }
+
+      showToast(`${newCategoriesCount} yeni kategori, ${productsToInsert.length} yeni ürün eklendi. ${updatedProductsCount} ürün güncellendi!`, "success");
+      
+      // Tüm ürünleri ve kategorileri yeniden çek
+      const { data: updatedCategories } = await supabase.from('categories').select('*').eq('restaurant_id', selectedRestaurant.id).order('sort_order', { ascending: true });
+      const { data: updatedProducts } = await supabase.from('products').select('*').eq('restaurant_id', selectedRestaurant.id).order('sort_order', { ascending: true });
+      
+      if (updatedCategories) setCategories(updatedCategories);
+      if (updatedProducts) setProducts(updatedProducts);
+
     } catch (err) {
       console.error(err);
       showToast("Excel dosyası okunurken hata oluştu.", "error");
@@ -548,6 +609,31 @@ export default function Admin() {
           showToast("Ürün silindi.");
         } else {
           showToast("Ürün silinemedi.", 'error');
+        }
+      }
+    });
+  };
+
+  const handleDeleteCategory = async (categoryId: string) => {
+    setConfirmDialog({
+      isOpen: true,
+      message: "Bu kategoriyi silmek istediğinize emin misiniz? DİKKAT: İçindeki tüm ürünler de silinecektir!",
+      onConfirm: async () => {
+        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+        
+        // Önce bu kategoriye ait ürünleri sil (Foreign key hatasını önlemek için)
+        await supabase.from('products').delete().eq('category_id', categoryId);
+
+        // Sonra kategoriyi sil
+        const { error } = await supabase.from('categories').delete().eq('id', categoryId);
+        
+        if (!error) { 
+          setCategories(categories.filter(c => c.id !== categoryId)); 
+          setProducts(products.filter(p => p.category_id !== categoryId));
+          if (selectedCategoryId === categoryId) setSelectedCategoryId('');
+          showToast("Kategori başarıyla silindi.");
+        } else {
+          showToast("Kategori silinemedi: " + error.message, 'error');
         }
       }
     });
@@ -913,10 +999,12 @@ export default function Admin() {
             sortedCategories={sortedCategories}
             layoutStyle={layoutStyle}
             categories={categories}
+            products={products}
             sensors={sensors}
             handleDragEndCategories={handleDragEndCategories}
             SortableCategoryItem={SortableCategoryItem}
             moveCategory={moveCategory}
+            handleDeleteCategory={handleDeleteCategory}
             editingProductId={editingProductId}
             handleSubmitProduct={handleSubmitProduct}
             selectedCategoryId={selectedCategoryId} setSelectedCategoryId={setSelectedCategoryId}

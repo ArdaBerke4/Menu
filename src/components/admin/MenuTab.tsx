@@ -1,6 +1,7 @@
 import { DndContext, closestCenter } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { InlinePriceEdit } from './InlinePriceEdit';
+import * as XLSX from 'xlsx';
 
 export function MenuTab(props: any) {
   const {
@@ -11,10 +12,12 @@ export function MenuTab(props: any) {
     handleFileUpload,
     sortedCategories,
     categories,
+    products,
     sensors,
     handleDragEndCategories,
     SortableCategoryItem,
     moveCategory,
+    handleDeleteCategory,
     editingProductId,
     handleSubmitProduct,
     selectedCategoryId, setSelectedCategoryId,
@@ -43,6 +46,42 @@ export function MenuTab(props: any) {
     productOptions, setProductOptions
   } = props;
 
+  const handleExportExcel = () => {
+    if (!categories || !products) return;
+    
+    // Excel için verileri hazırla
+    // İstenen sütunlar: Kategori ID, Kategori, Ürün ID, Ürün Adı, Fiyat, Açıklama
+    const data = [
+      ["Kategori ID", "Kategori", "Ürün ID", "Ürün Adı", "Fiyat", "Açıklama"]
+    ];
+
+    // Ürünleri kategori adına göre eşleştirip diziye ekle
+    products.forEach((product: any) => {
+      const category = categories.find((c: any) => c.id === product.category_id);
+      data.push([
+        category ? category.id : "",
+        category ? category.name : "Bilinmeyen Kategori",
+        product.id,
+        product.name,
+        product.price,
+        product.description || ""
+      ]);
+    });
+
+    // Worksheet oluştur
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    
+    // Sütun genişlikleri
+    ws['!cols'] = [{ wch: 36 }, { wch: 20 }, { wch: 36 }, { wch: 30 }, { wch: 10 }, { wch: 40 }];
+
+    // Workbook oluştur ve sayfayı ekle
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Menu");
+
+    // Excel dosyasını indir
+    XLSX.writeFile(wb, `Menu_Yedek_${new Date().toLocaleDateString('tr-TR').replace(/\./g, '-')}.xlsx`);
+  };
+
   return (
     <div className="max-w-[1400px] flex gap-10">
       <div className="w-[450px] shrink-0 space-y-8">
@@ -54,16 +93,30 @@ export function MenuTab(props: any) {
           </form>
         </div>
 
-        {/* TOPLU MENÜ YÜKLE */}
+        {/* TOPLU MENÜ YÜKLE & İNDİR */}
         <div className="bg-admin-bg border-4 border-admin-border shadow-admin-pixel p-6">
-          <h2 className="text-2xl font-bold mb-2 uppercase text-admin-text border-b-2 border-admin-border pb-2">Toplu Menü Aktar 📥</h2>
-          <p className="text-sm font-bold opacity-70 mb-4">Mevcut bir Excel dosyanızı seçerek menünüzü hızlıca oluşturun. (Sütunlar: Kategori, Ürün Adı, Fiyat, Açıklama)</p>
-          <div className="flex gap-4">
-            <input type="file" accept=".xlsx, .xls, .csv" ref={fileInputRef} onChange={handleFileUpload} className="hidden" id="excel-upload" />
-            <label htmlFor="excel-upload" className="w-full text-center bg-brand text-surface border-2 border-admin-border px-4 py-3 font-bold hover:opacity-90 transition-opacity shadow-admin-pixel-sm cursor-pointer">
-              Excel/CSV Seç Yükle
-            </label>
+          <h2 className="text-2xl font-bold mb-2 uppercase text-admin-text border-b-2 border-admin-border pb-2">Menü Yedekleme 📥</h2>
+          <p className="text-sm font-bold opacity-70 mb-4">Mevcut bir Excel dosyası yükleyerek menüyü güncelleyebilir veya mevcut menünüzün yedeğini alabilirsiniz.</p>
+          
+          <div className="flex flex-col gap-3">
+            <button onClick={handleExportExcel} className="w-full text-center bg-[#5b7a57] text-surface border-2 border-admin-border px-4 py-3 font-bold hover:opacity-90 transition-opacity shadow-admin-pixel-sm cursor-pointer flex items-center justify-center gap-2">
+              <span>📥</span> Mevcut Menüyü İndir (Yedek Al)
+            </button>
+            
+            <div className="flex items-center gap-2 my-2">
+              <div className="h-[2px] flex-1 bg-admin-border/20"></div>
+              <span className="text-xs font-bold text-admin-text/50 uppercase">VEYA</span>
+              <div className="h-[2px] flex-1 bg-admin-border/20"></div>
+            </div>
+
+            <div className="flex gap-4">
+              <input type="file" accept=".xlsx, .xls, .csv" ref={fileInputRef} onChange={handleFileUpload} className="hidden" id="excel-upload" />
+              <label htmlFor="excel-upload" className="w-full text-center bg-brand text-surface border-2 border-admin-border px-4 py-3 font-bold hover:opacity-90 transition-opacity shadow-admin-pixel-sm cursor-pointer">
+                Excel/CSV Seç & Yükle
+              </label>
+            </div>
           </div>
+
           <div className="mt-4 flex flex-col gap-1 text-xs font-bold opacity-60">
             <div className="flex items-center justify-between">
               <span>Örnek Tablo:</span>
@@ -91,6 +144,7 @@ export function MenuTab(props: any) {
                           category={cat} 
                           onUp={moveCategory} 
                           onDown={moveCategory} 
+                          onDelete={handleDeleteCategory}
                           isFirst={index === 0} 
                           isLast={index === sortedCategories.length - 1} 
                         />

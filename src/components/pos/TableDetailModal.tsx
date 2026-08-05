@@ -45,8 +45,8 @@ export function TableDetailModal({
     if (error) {
       showToast('İsim güncellenemedi: ' + error.message, 'error');
     } else {
-      showToast('Masa ismi güncellendi!');
       setIsEditingLabel(false);
+      showToast('Masa ismi güncellendi!');
     }
   };
 
