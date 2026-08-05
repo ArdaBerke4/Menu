@@ -69,7 +69,7 @@ export function MenuTab(props: any) {
           <div className="mt-4 flex flex-col gap-1 text-xs font-bold opacity-60">
             <div className="flex items-center justify-between">
               <span>Örnek Tablo:</span>
-              <a href="/ornek_menu.csv" download className="text-brand-dark underline hover:text-brand transition-colors cursor-pointer text-sm">
+              <a href="/ornek_menu.xlsx" download className="text-brand-dark underline hover:text-brand transition-colors cursor-pointer text-sm">
                 📥 Örnek Dosya İndir
               </a>
             </div>
