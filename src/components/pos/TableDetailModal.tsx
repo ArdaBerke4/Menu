@@ -50,6 +50,23 @@ export function TableDetailModal({
     }
   };
 
+  const handleDeleteTable = async () => {
+    const hasActiveOrders = orders.some(o => o.table_id === table.id);
+    if (hasActiveOrders) {
+      if (!window.confirm("Bu masada aktif siparişler var! Yine de masayı silmek istiyor musunuz?")) return;
+    } else {
+      if (!window.confirm("Bu masayı silmek istediğinize emin misiniz?")) return;
+    }
+
+    const { error } = await supabase.from('tables').delete().eq('id', table.id);
+    if (error) {
+      showToast('Masa silinemedi: ' + error.message, 'error');
+    } else {
+      showToast('Masa başarıyla silindi.');
+      onClose();
+    }
+  };
+
   const tableOrders = orders.filter(o => o.table_id === table.id);
   const tableItems = orderItems.filter(i => tableOrders.some(o => o.id === i.order_id));
 
@@ -152,6 +169,9 @@ export function TableDetailModal({
                   </h2>
                   <button onClick={() => setIsEditingLabel(true)} className="text-brand-dark/50 hover:text-brand-dark text-lg p-1" title="İsmi Düzenle">
                     ✎
+                  </button>
+                  <button onClick={handleDeleteTable} className="text-red-500/50 hover:text-red-600 text-lg p-1" title="Masayı Sil">
+                    🗑️
                   </button>
                 </div>
               )}
