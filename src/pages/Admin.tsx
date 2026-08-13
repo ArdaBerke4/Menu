@@ -12,6 +12,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { CampaignsTab } from '../components/admin/CampaignsTab';
 import { SettingsTab, DEFAULT_BG_COLOR } from '../components/admin/SettingsTab';
 import { MenuTab } from '../components/admin/MenuTab';
+import StaffTab from '../components/admin/StaffTab';
 import type { Restaurant, Category, Product, Campaign, ProductOption } from '../types/admin';
 
 // Types are imported from ../types/admin
@@ -34,7 +35,7 @@ function SortableCategoryItem({ category, onUp, onDown, isFirst, isLast, onDelet
 }
 
 export default function Admin() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'menu' | 'about' | 'settings' | 'campaigns'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'menu' | 'about' | 'settings' | 'campaigns' | 'staff'>('dashboard');
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{isOpen: boolean, message: string, onConfirm: () => void}>({ isOpen: false, message: '', onConfirm: () => {} });
@@ -872,6 +873,7 @@ export default function Admin() {
             <button onClick={() => setActiveTab('campaigns')} className={`text-left px-4 py-3 border-2 border-admin-border transition-all ${activeTab === 'campaigns' ? 'bg-admin-primary text-admin-primary-text shadow-admin-pixel' : 'bg-admin-surface text-admin-text hover:bg-admin-sidebar-hover'}`}>Kampanya Düzenle 🏷️</button>
             <button onClick={() => setActiveTab('about')} className={`text-left px-4 py-3 border-2 border-admin-border transition-all ${activeTab === 'about' ? 'bg-admin-primary text-admin-primary-text shadow-admin-pixel' : 'bg-admin-surface text-admin-text hover:bg-admin-sidebar-hover'}`}>Restoran Hakkında</button>
             <button onClick={() => setActiveTab('settings')} className={`text-left px-4 py-3 border-2 border-admin-border transition-all ${activeTab === 'settings' ? 'bg-admin-primary text-admin-primary-text shadow-admin-pixel' : 'bg-admin-surface text-admin-text hover:bg-admin-sidebar-hover'}`}>Görünüm Ayarları</button>
+            <button onClick={() => setActiveTab('staff')} className={`text-left px-4 py-3 border-2 border-admin-border transition-all ${activeTab === 'staff' ? 'bg-admin-primary text-admin-primary-text shadow-admin-pixel' : 'bg-admin-surface text-admin-text hover:bg-admin-sidebar-hover'}`}>Personeller 🧑‍🍳</button>
           </nav>
           <div className="mt-auto pt-6 border-t-4 border-admin-border space-y-3">
             {renderThemePicker()}
@@ -987,6 +989,11 @@ export default function Admin() {
             fileInputRef={fileInputRef}
           />
         )}
+
+          {/* ===== PERSONELLER ===== */}
+          {activeTab === 'staff' && selectedRestaurant && (
+            <StaffTab restaurant={selectedRestaurant} />
+          )}
 
         {/* ===== MENÜ/ENVANTER ===== */}
         {activeTab === 'menu' && selectedRestaurant && (

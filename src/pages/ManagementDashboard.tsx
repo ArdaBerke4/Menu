@@ -11,7 +11,8 @@ import QRCodeStyling from 'qr-code-styling';
 import { useRef } from 'react';
 import type { Table } from '../types/pos';
 import type { Category, Product } from '../types/admin';
-import { getStaffToken } from '../utils/auth';
+import { getStaffToken, getStaffSession, clearStaffSession } from '../utils/auth';
+import { ChangePasswordModal } from '../components/pos/ChangePasswordModal';
 
 export default function ManagementDashboard() {
   const { restaurantId } = useParams();
@@ -28,7 +29,9 @@ export default function ManagementDashboard() {
   const [addLoading, setAddLoading] = useState(false);
   const [restaurant, setRestaurant] = useState<any>(null);
   const [staffRole, setStaffRole] = useState<'admin' | 'waiter' | 'chef' | null>(null);
+  const [staffId, setStaffId] = useState<string | null>(null);
   const [showStaffQR, setShowStaffQR] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
   const waiterQrRef = useRef<HTMLDivElement>(null);
   const chefQrRef = useRef<HTMLDivElement>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -42,14 +45,21 @@ export default function ManagementDashboard() {
 
   // Rol Kontrolü
   useEffect(() => {
-    const role = localStorage.getItem(`staff_role_${restaurantId}`);
-    if (role === 'waiter' || role === 'chef') {
-      setStaffRole(role);
+    const session = getStaffSession(restaurantId!);
+    if (session && (session.role === 'waiter' || session.role === 'chef')) {
+      setStaffRole(session.role as 'waiter' | 'chef');
+      setStaffId(session.id);
     } else {
-      supabase.auth.getUser().then(({ data }) => {
-        if (data.user) setStaffRole('admin');
-        else navigate('/auth');
-      });
+      // Fallback for admin
+      const legacyRole = localStorage.getItem(`staff_role_${restaurantId}`);
+      if (legacyRole === 'waiter' || legacyRole === 'chef') {
+        setStaffRole(legacyRole as 'waiter' | 'chef');
+      } else {
+        supabase.auth.getUser().then(({ data }) => {
+          if (data.user) setStaffRole('admin');
+          else navigate('/auth');
+        });
+      }
     }
   }, [restaurantId, navigate]);
 
@@ -177,8 +187,9 @@ export default function ManagementDashboard() {
         tables={tables}
         showToast={showToast}
         staffRole={staffRole}
+        staffId={staffId}
         onLogout={() => {
-          localStorage.removeItem(`staff_role_${restaurantId}`);
+          clearStaffSession(restaurantId!);
           navigate(`/menu/${restaurant?.slug || restaurantId}`);
         }}
       />
@@ -249,19 +260,34 @@ export default function ManagementDashboard() {
               </button>
             )}
             {staffRole === 'waiter' && (
-              <button
-                onClick={() => {
-                  localStorage.removeItem(`staff_role_${restaurantId}`);
-                  navigate(`/menu/${restaurant?.slug || restaurantId}`);
-                }}
-                className="px-4 py-2 bg-red-100 text-red-800 border-2 border-red-500 font-bold hover:bg-red-200 shadow-pixel-sm active:translate-y-0.5"
-              >
-                Çıkış Yap
-              </button>
+              <>
+                <button
+                  onClick={() => setShowChangePassword(true)}
+                  className="px-4 py-2 bg-slate-100 text-slate-800 border-2 border-slate-500 font-bold hover:bg-slate-200 shadow-pixel-sm active:translate-y-0.5"
+                >
+                  Şifre Değiştir
+                </button>
+                <button
+                  onClick={() => {
+                    clearStaffSession(restaurantId!);
+                    navigate(`/menu/${restaurant?.slug || restaurantId}`);
+                  }}
+                  className="px-4 py-2 bg-red-100 text-red-800 border-2 border-red-500 font-bold hover:bg-red-200 shadow-pixel-sm active:translate-y-0.5"
+                >
+                  Çıkış Yap
+                </button>
+              </>
             )}
           </div>
         </div>
       </header>
+
+      {showChangePassword && staffId && (
+        <ChangePasswordModal 
+          staffId={staffId} 
+          onClose={() => setShowChangePassword(false)} 
+        />
+      )}
 
       <div className="max-w-7xl mx-auto p-6 space-y-6">
 

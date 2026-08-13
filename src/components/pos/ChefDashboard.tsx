@@ -1,17 +1,20 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { supabase } from '../../supabase';
 import type { Order, OrderItem, Table } from '../../types/pos';
+import { ChangePasswordModal } from './ChangePasswordModal';
 
 interface ChefDashboardProps {
   orders: Order[];
   orderItems: OrderItem[];
   tables: Table[];
   staffRole?: string;
+  staffId?: string | null;
   showToast: (msg: string, type?: 'success' | 'error') => void;
   onLogout: () => void;
 }
 
-export function ChefDashboard({ orders, orderItems, tables, showToast, onLogout }: ChefDashboardProps) {
+export function ChefDashboard({ orders, orderItems, tables, showToast, onLogout, staffId }: ChefDashboardProps) {
+  const [showChangePassword, setShowChangePassword] = useState(false);
   // Sadece bekleyen (pending) ve hazırlanan (preparing) sipariş kalemleri
   const activeItems = useMemo(() => {
     return orderItems.filter(item => item.status === 'pending' || item.status === 'preparing');
@@ -55,16 +58,33 @@ export function ChefDashboard({ orders, orderItems, tables, showToast, onLogout 
     <div className="min-h-screen bg-surface font-pixel text-ink">
       <header className="sticky top-0 z-40 bg-[#F4E4C1] border-b-4 border-brand-dark px-6 py-4 flex justify-between items-center shadow-pixel-sm">
         <div>
-          <h1 className="text-2xl font-bold text-brand-dark uppercase">👨‍🍳 Mutfak Ekranı (KDS)</h1>
+          <h1 className="text-2xl font-bold text-brand-dark uppercase">Mutfak (KDS)</h1>
           <p className="text-sm font-bold text-brand-dark/50">Sadece aktif siparişleri görüyorsunuz.</p>
         </div>
-        <button 
-          onClick={onLogout}
-          className="px-4 py-2 border-2 border-brand-dark bg-white text-brand-dark font-bold hover:bg-red-100 hover:text-red-700 transition-colors"
-        >
-          Çıkış Yap
-        </button>
+        <div className="flex gap-2">
+          {staffId && (
+            <button 
+              onClick={() => setShowChangePassword(true)}
+              className="px-4 py-2 border-2 border-slate-500 bg-slate-100 text-slate-800 font-bold hover:bg-slate-200 transition-colors"
+            >
+              Şifre Değiştir
+            </button>
+          )}
+          <button 
+            onClick={onLogout}
+            className="px-4 py-2 border-2 border-brand-dark bg-white text-brand-dark font-bold hover:bg-red-100 hover:text-red-700 transition-colors"
+          >
+            Çıkış Yap
+          </button>
+        </div>
       </header>
+
+      {showChangePassword && staffId && (
+        <ChangePasswordModal 
+          staffId={staffId} 
+          onClose={() => setShowChangePassword(false)} 
+        />
+      )}
 
       <div className="max-w-7xl mx-auto p-6">
         {groupedOrders.length === 0 ? (

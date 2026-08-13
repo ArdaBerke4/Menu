@@ -64,3 +64,11 @@ export interface Campaign {
   is_active: boolean;
   created_at?: string;
 }
+
+export interface StaffAccount {
+  id: string;
+  restaurant_id: string;
+  username: string;
+  role: 'waiter' | 'chef';
+  created_at: string;
+}
