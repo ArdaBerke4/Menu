@@ -45,20 +45,26 @@ export default function ManagementDashboard() {
 
   // Rol Kontrolü
   useEffect(() => {
-    const session = getStaffSession(restaurantId!);
-    if (session && (session.role === 'waiter' || session.role === 'chef')) {
-      setStaffRole(session.role as 'waiter' | 'chef');
-      setStaffId(session.id);
-    } else {
-      // Eğer garson/şef değilse, admin mi diye kontrol et
-      supabase.auth.getUser().then(({ data }) => {
-        if (data.user) {
-          setStaffRole('admin');
-        } else {
-          navigate('/auth');
-        }
-      });
-    }
+    const checkRole = async () => {
+      // 1. Önce Admin (Supabase) girişi var mı kontrol et
+      const { data } = await supabase.auth.getUser();
+      if (data.user) {
+        setStaffRole('admin');
+        return;
+      }
+
+      // 2. Eğer admin değilse, Garson/Şef oturumu var mı kontrol et
+      const session = getStaffSession(restaurantId!);
+      if (session && (session.role === 'waiter' || session.role === 'chef')) {
+        setStaffRole(session.role as 'waiter' | 'chef');
+        setStaffId(session.id);
+      } else {
+        // İkisi de yoksa ana giriş ekranına at
+        navigate('/auth');
+      }
+    };
+
+    checkRole();
   }, [restaurantId, navigate]);
 
   // Aktif masanın güncel kalmasını sağla (İsim değişimi, garson çağırma, hesap isteme vb. realtime güncellemeler için)
