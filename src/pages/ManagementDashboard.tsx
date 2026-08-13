@@ -50,16 +50,14 @@ export default function ManagementDashboard() {
       setStaffRole(session.role as 'waiter' | 'chef');
       setStaffId(session.id);
     } else {
-      // Fallback for admin
-      const legacyRole = localStorage.getItem(`staff_role_${restaurantId}`);
-      if (legacyRole === 'waiter' || legacyRole === 'chef') {
-        setStaffRole(legacyRole as 'waiter' | 'chef');
-      } else {
-        supabase.auth.getUser().then(({ data }) => {
-          if (data.user) setStaffRole('admin');
-          else navigate('/auth');
-        });
-      }
+      // Eğer garson/şef değilse, admin mi diye kontrol et
+      supabase.auth.getUser().then(({ data }) => {
+        if (data.user) {
+          setStaffRole('admin');
+        } else {
+          navigate('/auth');
+        }
+      });
     }
   }, [restaurantId, navigate]);
 

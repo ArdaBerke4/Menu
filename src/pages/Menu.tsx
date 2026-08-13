@@ -191,6 +191,13 @@ export default function Menu() {
   const [isRequestingBill, setIsRequestingBill] = useState(false);
   const [hasRequestedBill, setHasRequestedBill] = useState(false);
   const [billMethodOpen, setBillMethodOpen] = useState(false);
+  const [tableBillOrders, setTableBillOrders] = useState<any[]>([]);
+  const [tableBillItems, setTableBillItems] = useState<any[]>([]);
+  const [isBillLoading, setIsBillLoading] = useState(false);
+  
+  // MASADAN SİPARİŞ (POS) STATE'LERİ
+  const [tableId, setTableId] = useState<string | null>(null);
+  
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -321,6 +328,28 @@ export default function Menu() {
     setIsCallingWaiter(false);
   };
 
+  useEffect(() => {
+    if (billMethodOpen && tableId) {
+      const fetchBill = async () => {
+        setIsBillLoading(true);
+        const { data: ordersData } = await supabase.from('orders').select('*').eq('table_id', tableId).not('status', 'in', '("paid","cancelled")');
+        if (ordersData && ordersData.length > 0) {
+          setTableBillOrders(ordersData);
+          const orderIds = ordersData.map((o: any) => o.id);
+          const { data: itemsData } = await supabase.from('order_items').select('*').in('order_id', orderIds);
+          if (itemsData) setTableBillItems(itemsData);
+        } else {
+          setTableBillOrders([]);
+          setTableBillItems([]);
+        }
+        setIsBillLoading(false);
+      };
+      fetchBill();
+    }
+  }, [billMethodOpen, tableId]);
+
+  const billTotal = tableBillItems.filter(i => i.status !== 'cancelled').reduce((acc, item) => acc + (item.unit_price * item.quantity), 0);
+
   const handleRequestBill = async (method: 'cash' | 'card') => {
     if (!tableId || hasRequestedBill) return;
     setIsRequestingBill(true);
@@ -347,7 +376,6 @@ export default function Menu() {
   }, 0);
 
   // MASADAN SİPARİŞ (POS) STATE'LERİ
-  const [tableId, setTableId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
 
@@ -878,25 +906,57 @@ export default function Menu() {
       {billMethodOpen && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setBillMethodOpen(false)}>
           <div 
-            className="w-full max-w-sm bg-white border-4 shadow-2xl p-6 flex flex-col"
+            className="w-full max-w-sm bg-white border-4 shadow-2xl flex flex-col max-h-[90vh]"
             style={{ borderColor: themeColor, borderRadius: borderRadiusValue }}
             onClick={e => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between mb-6 border-b-2 pb-2" style={{ borderColor: themeColor }}>
-              <h2 className="text-xl font-bold uppercase" style={{ color: themeColor }}>{t.selectPaymentMethod}</h2>
+            <div className="flex items-center justify-between p-4 border-b-2" style={{ borderColor: themeColor }}>
+              <h2 className="text-xl font-bold uppercase" style={{ color: themeColor }}>{t.requestBill}</h2>
               <button onClick={() => setBillMethodOpen(false)} className="text-3xl hover:opacity-70">✕</button>
             </div>
-            <div className="flex flex-col gap-4">
+            
+            <div className="flex-1 overflow-y-auto p-4 bg-[#fdfbf7] font-mono text-[#1a1a1a]">
+              {isBillLoading ? (
+                <div className="text-center py-8 font-sans">{t.loading}</div>
+              ) : tableBillOrders.length === 0 ? (
+                <div className="text-center py-8 font-sans">Aktif sipariş bulunamadı.</div>
+              ) : (
+                <div className="border-2 border-dashed border-[#1a1a1a]/30 p-4 relative">
+                  <div className="text-center mb-4 border-b-2 border-dashed border-[#1a1a1a]/30 pb-2">
+                    <h3 className="font-bold text-xl tracking-widest">ADİSYON</h3>
+                  </div>
+                  <div className="space-y-2 mb-4">
+                    {tableBillItems.filter(i => i.status !== 'cancelled').map(item => (
+                      <div key={item.id} className="flex justify-between items-start text-sm">
+                        <div className="flex-1 pr-2">
+                          <span className="font-bold">{item.quantity}x</span> {item.product_name}
+                        </div>
+                        <span className="font-bold shrink-0">₺{(item.unit_price * item.quantity).toFixed(0)}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="border-t-2 border-dashed border-[#1a1a1a]/30 pt-2 flex justify-between items-center font-bold text-lg">
+                    <span>TOPLAM</span>
+                    <span>₺{billTotal.toFixed(0)}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 bg-white border-t-2 flex flex-col gap-3" style={{ borderColor: themeColor }}>
+              <div className="text-center text-sm font-bold uppercase mb-1" style={{ color: themeColor }}>{t.selectPaymentMethod}</div>
               <button 
                 onClick={() => handleRequestBill('cash')}
-                className="w-full py-4 text-xl font-bold border-2 transition-all hover:bg-slate-50"
+                disabled={isBillLoading || tableBillOrders.length === 0}
+                className="w-full py-3 text-lg font-bold border-2 transition-all hover:bg-slate-50 disabled:opacity-50"
                 style={{ borderColor: themeColor, color: themeColor, borderRadius: borderRadiusValue }}
               >
                 {t.cash}
               </button>
               <button 
                 onClick={() => handleRequestBill('card')}
-                className="w-full py-4 text-xl font-bold border-2 transition-all hover:bg-slate-50"
+                disabled={isBillLoading || tableBillOrders.length === 0}
+                className="w-full py-3 text-lg font-bold border-2 transition-all hover:bg-slate-50 disabled:opacity-50"
                 style={{ borderColor: themeColor, color: themeColor, borderRadius: borderRadiusValue }}
               >
                 {t.creditCard}
