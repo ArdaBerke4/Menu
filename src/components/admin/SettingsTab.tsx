@@ -26,12 +26,7 @@ export const FONT_OPTIONS = [
   { id: '"Comic Sans MS", cursive, sans-serif', name: 'Eğlenceli (Comic Sans)' },
 ];
 
-export const FONT_SIZE_OPTIONS = [
-  { id: 'small', name: 'Küçük' },
-  { id: 'medium', name: 'Orta' },
-  { id: 'large', name: 'Büyük' },
-  { id: 'xlarge', name: 'Çok Büyük' },
-];
+
 
 export const BUTTON_SHAPE_OPTIONS = [
   { id: 'square', name: 'Keskin Köşeli' },
@@ -66,14 +61,14 @@ export const getTextColorForBackground = (bgColor: string) => {
   return (yiq >= 128) ? '#000000' : '#FFFFFF';
 };
 
-export const getFontSizeClasses = (size?: string) => {
-  switch (size) {
-    case 'small':  return { cat: 'text-xl', product: 'text-xl', desc: 'text-sm', price: 'text-lg' };
-    case 'medium': return { cat: 'text-2xl', product: 'text-2xl', desc: 'text-lg', price: 'text-xl' };
-    case 'large':  return { cat: 'text-3xl', product: 'text-3xl', desc: 'text-xl', price: 'text-2xl' };
-    case 'xlarge': return { cat: 'text-4xl', product: 'text-4xl', desc: 'text-2xl', price: 'text-3xl' };
-    default:       return { cat: 'text-2xl', product: 'text-2xl', desc: 'text-lg', price: 'text-xl' };
-  }
+export const getDynamicFontStyles = (size?: string) => {
+  const baseSize = parseInt(size || '16') || (size === 'small' ? 14 : size === 'large' ? 20 : size === 'xlarge' ? 24 : 16);
+  return {
+    cat: { fontSize: `${baseSize * 1.25}px` },
+    product: { fontSize: `${baseSize}px` },
+    desc: { fontSize: `${Math.max(10, baseSize * 0.75)}px` },
+    price: { fontSize: `${baseSize * 1.125}px` },
+  };
 };
 
 export const getRecommendedColors = (bgColor: string) => {
@@ -242,22 +237,26 @@ export function SettingsTab(props: any) {
             </div>
 
             <div>
-              <label className="block font-bold mb-2">Yazı Boyutu</label>
-              <div className="flex bg-admin-surface border-2 border-admin-border">
-                {FONT_SIZE_OPTIONS.map(opt => (
-                  <button
-                    key={opt.id} type="button"
-                    onClick={() => { saveToHistory(); setFontSize(opt.id); }}
-                    className={`flex-1 py-2 font-bold text-sm transition-colors border-r-2 border-admin-border last:border-r-0 ${fontSize === opt.id ? 'bg-brand text-surface' : 'hover:bg-brand-light'}`}
-                  >
-                    {opt.name}
-                  </button>
-                ))}
+              <label className="block font-bold mb-2">Yazı Boyutu ({parseInt(fontSize || '16') || (fontSize === 'small' ? 14 : fontSize === 'large' ? 20 : fontSize === 'xlarge' ? 24 : 16)}px)</label>
+              <div className="bg-admin-surface border-2 border-admin-border p-4 flex items-center gap-4">
+                  <span className="text-sm font-bold">A</span>
+                  <input 
+                    type="range" 
+                    min="12" 
+                    max="28" 
+                    step="1" 
+                    value={parseInt(fontSize || '16') || (fontSize === 'small' ? 14 : fontSize === 'large' ? 20 : fontSize === 'xlarge' ? 24 : 16)}
+                    onChange={(e) => { setFontSize(e.target.value); }}
+                    onMouseUp={saveToHistory}
+                    onTouchEnd={saveToHistory}
+                    className="flex-1 accent-brand cursor-pointer"
+                  />
+                  <span className="text-2xl font-bold">A</span>
+                </div>
               </div>
-            </div>
-
-            <div>
-              <label className="block font-bold mb-2">Buton Şekilleri</label>
+  
+              <div>
+                <label className="block font-bold mb-2">Buton Şekilleri</label>
               <select value={buttonShape} onChange={e => { saveToHistory(); setButtonShape(e.target.value); }} className="w-full px-4 py-3 border-2 border-admin-border bg-admin-surface font-bold focus:outline-none">
                 {BUTTON_SHAPE_OPTIONS.map(opt => <option key={opt.id} value={opt.id}>{opt.name}</option>)}
               </select>
@@ -326,7 +325,7 @@ export function SettingsTab(props: any) {
               <div className="min-h-full flex flex-col p-4 pt-8" style={{ fontFamily: themeFont }}>
                 
                 {/* Header */}
-                <div className={`w-full ${headerStyle === 'left' ? 'p-4 flex items-center gap-3 text-left' : headerStyle === 'banner' ? 'relative text-center' : 'p-4 text-center'} bg-admin-surface/80 backdrop-blur-sm shadow-sm mb-4`} style={{ color: themeColor }}>
+                <div className={`w-full ${headerStyle === 'left' ? 'p-4 flex items-center gap-3 text-left' : headerStyle === 'banner' ? 'relative text-center' : 'p-4 text-center'} bg-admin-surface/80 backdrop-blur-sm shadow-sm mb-4`} style={{ color: themeColor, ...getDynamicFontStyles(fontSize).price }}>
                   {headerStyle === 'banner' && <div className="w-full h-16 bg-black/10 border-b-2" style={{ borderColor: themeColor }}></div>}
                   <div className={`bg-gray-100 border-2 overflow-hidden shrink-0 ${
                     headerStyle === 'banner' ? 'w-12 h-12 absolute left-1/2 -translate-x-1/2 -top-6' : 
@@ -337,17 +336,17 @@ export function SettingsTab(props: any) {
                      <div className="w-full h-full flex items-center justify-center font-bold text-xs">LOGO</div>}
                   </div>
                   <div className={headerStyle === 'banner' ? 'pt-8 pb-3 px-2' : 'flex-1'}>
-                    <div className={`font-bold uppercase ${headerStyle === 'left' ? 'text-lg leading-tight' : 'text-xl'}`}>{selectedRestaurant?.name || 'Restoran Adı'}</div>
-                    <div className={`${headerStyle === 'left' ? 'text-xs' : 'text-sm'} opacity-70`}>{selectedRestaurant?.description || 'Kısa restoran açıklaması burada yer alır.'}</div>
+                    <div className="font-bold uppercase leading-tight" style={getDynamicFontStyles(fontSize).cat}>{selectedRestaurant?.name || 'Restoran Adı'}</div>
+                    <div className="opacity-70" style={getDynamicFontStyles(fontSize).desc}>{selectedRestaurant?.description || 'Kısa restoran açıklaması burada yer alır.'}</div>
                   </div>
                 </div>
 
                 {/* Nav */}
                 {navStyle === 'tabs' && (
                   <div className="w-full px-2 py-3 flex gap-2 overflow-hidden border-b-2 bg-admin-surface/50 mb-4" style={{ borderColor: `${themeColor}40` }}>
-                    <div className={`px-3 py-1 font-bold text-[10px] border-2 shadow-sm whitespace-nowrap`} style={{ backgroundColor: themeColor, color: 'white', borderColor: themeColor, borderRadius: buttonShape === 'pill' ? '99px' : buttonShape === 'rounded' ? '8px' : '0' }}>Popüler</div>
-                    <div className={`px-3 py-1 font-bold text-[10px] border-2 shadow-sm whitespace-nowrap bg-admin-surface`} style={{ color: themeColor, borderColor: themeColor, borderRadius: buttonShape === 'pill' ? '99px' : buttonShape === 'rounded' ? '8px' : '0' }}>Tatlılar</div>
-                    <div className={`px-3 py-1 font-bold text-[10px] border-2 shadow-sm whitespace-nowrap bg-admin-surface`} style={{ color: themeColor, borderColor: themeColor, borderRadius: buttonShape === 'pill' ? '99px' : buttonShape === 'rounded' ? '8px' : '0' }}>İçecekler</div>
+                    <div className="px-3 py-1 font-bold border-2 shadow-sm whitespace-nowrap" style={{ backgroundColor: themeColor, color: 'white', borderColor: themeColor, borderRadius: buttonShape === 'pill' ? '99px' : buttonShape === 'rounded' ? '8px' : '0', ...getDynamicFontStyles(fontSize).desc }}>Popüler</div>
+                    <div className="px-3 py-1 font-bold border-2 shadow-sm whitespace-nowrap bg-admin-surface" style={{ color: themeColor, borderColor: themeColor, borderRadius: buttonShape === 'pill' ? '99px' : buttonShape === 'rounded' ? '8px' : '0', ...getDynamicFontStyles(fontSize).desc }}>Tatlılar</div>
+                    <div className="px-3 py-1 font-bold border-2 shadow-sm whitespace-nowrap bg-admin-surface" style={{ color: themeColor, borderColor: themeColor, borderRadius: buttonShape === 'pill' ? '99px' : buttonShape === 'rounded' ? '8px' : '0', ...getDynamicFontStyles(fontSize).desc }}>İçecekler</div>
                   </div>
                 )}
 
@@ -355,31 +354,53 @@ export function SettingsTab(props: any) {
                 <div className="flex-1 w-full p-2 flex flex-col gap-3">
                   {layoutStyle === 'list' && (
                     <>
-                      <div className={`w-full p-2 border-2 shadow-sm flex gap-2`} style={{ borderColor: themeColor, backgroundColor: cardBgColor, borderRadius: buttonShape === 'pill' ? '12px' : buttonShape === 'rounded' ? '8px' : '0' }}>
-                        <div className="w-10 h-10 bg-black/10 shrink-0" style={{ borderRadius: buttonShape === 'pill' ? '99px' : buttonShape === 'rounded' ? '4px' : '0' }}></div>
-                        <div className="flex-1 mt-1">
-                          <div className="h-2 w-3/4 bg-black/20 rounded mb-1"></div>
-                          <div className="h-1.5 w-1/2 bg-black/10 rounded"></div>
+                      <div className={`w-full p-3 border-2 shadow-sm flex gap-3`} style={{ borderColor: themeColor, backgroundColor: cardBgColor, borderRadius: buttonShape === 'pill' ? '12px' : buttonShape === 'rounded' ? '8px' : '0' }}>
+                        <div className="w-16 h-16 bg-black/10 shrink-0 flex items-center justify-center overflow-hidden" style={{ borderRadius: buttonShape === 'pill' ? '99px' : buttonShape === 'rounded' ? '4px' : '0' }}>
+                          <span className="text-xl">☕</span>
+                        </div>
+                        <div className="flex-1 flex flex-col min-w-0" style={{ color: getTextColorForBackground(cardBgColor) }}>
+                          <div className="font-bold leading-tight mb-1 line-clamp-2" style={getDynamicFontStyles(fontSize).product}>Filtre Kahve</div>
+                          <div className="opacity-70 line-clamp-2 mb-3" style={getDynamicFontStyles(fontSize).desc}>Taze demlenmiş yöresel</div>
+                          <div className="mt-auto pt-2 flex items-center justify-between gap-2">
+                            <div className="font-bold flex items-center" style={{ color: themeColor, ...getDynamicFontStyles(fontSize).price }}>
+                              95 ₺
+                            </div>
+                            <div className="w-8 h-8 shrink-0 border-2 flex items-center justify-center font-bold" style={{ borderColor: themeColor, backgroundColor: themeColor, color: 'white', borderRadius: buttonShape === 'pill' ? '99px' : buttonShape === 'rounded' ? '4px' : '0' }}>+</div>
+                          </div>
                         </div>
                       </div>
-                      <div className={`w-full p-2 border-2 shadow-sm flex gap-2`} style={{ borderColor: themeColor, backgroundColor: cardBgColor, borderRadius: buttonShape === 'pill' ? '12px' : buttonShape === 'rounded' ? '8px' : '0' }}>
-                        <div className="w-10 h-10 bg-black/10 shrink-0" style={{ borderRadius: buttonShape === 'pill' ? '99px' : buttonShape === 'rounded' ? '4px' : '0' }}></div>
-                        <div className="flex-1 mt-1">
-                          <div className="h-2 w-2/3 bg-black/20 rounded mb-1"></div>
-                          <div className="h-1.5 w-1/3 bg-black/10 rounded"></div>
+                      <div className={`w-full p-3 border-2 shadow-sm flex gap-3`} style={{ borderColor: themeColor, backgroundColor: cardBgColor, borderRadius: buttonShape === 'pill' ? '12px' : buttonShape === 'rounded' ? '8px' : '0' }}>
+                        <div className="w-16 h-16 bg-black/10 shrink-0 flex items-center justify-center overflow-hidden" style={{ borderRadius: buttonShape === 'pill' ? '99px' : buttonShape === 'rounded' ? '4px' : '0' }}>
+                          <span className="text-xl">🍰</span>
+                        </div>
+                        <div className="flex-1 flex flex-col min-w-0" style={{ color: getTextColorForBackground(cardBgColor) }}>
+                          <div className="font-bold leading-tight mb-1 line-clamp-2" style={getDynamicFontStyles(fontSize).product}>Cheesecake</div>
+                          <div className="opacity-70 line-clamp-2 mb-3" style={getDynamicFontStyles(fontSize).desc}>Orman meyveli</div>
+                          <div className="mt-auto pt-2 flex items-center justify-between gap-2">
+                            <div className="font-bold flex items-center" style={{ color: themeColor, ...getDynamicFontStyles(fontSize).price }}>
+                              140 ₺
+                            </div>
+                            <div className="w-8 h-8 shrink-0 border-2 flex items-center justify-center font-bold" style={{ borderColor: themeColor, backgroundColor: themeColor, color: 'white', borderRadius: buttonShape === 'pill' ? '99px' : buttonShape === 'rounded' ? '4px' : '0' }}>+</div>
+                          </div>
                         </div>
                       </div>
                     </>
                   )}
                   {layoutStyle === 'grid' && (
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className={`p-2 border-2 shadow-sm`} style={{ borderColor: themeColor, backgroundColor: cardBgColor, borderRadius: buttonShape === 'pill' ? '12px' : buttonShape === 'rounded' ? '8px' : '0' }}>
-                        <div className="w-full h-12 bg-black/10 mb-2" style={{ borderRadius: buttonShape === 'pill' ? '8px' : buttonShape === 'rounded' ? '4px' : '0' }}></div>
-                        <div className="h-1.5 w-3/4 bg-black/20 rounded"></div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className={`p-3 border-2 shadow-sm flex flex-col`} style={{ borderColor: themeColor, backgroundColor: cardBgColor, borderRadius: buttonShape === 'pill' ? '12px' : buttonShape === 'rounded' ? '8px' : '0' }}>
+                        <div className="w-full h-24 bg-black/10 mb-3 flex items-center justify-center overflow-hidden" style={{ borderRadius: buttonShape === 'pill' ? '8px' : buttonShape === 'rounded' ? '4px' : '0' }}>
+                          <span className="text-3xl">🍔</span>
+                        </div>
+                        <div className="font-bold mb-1 line-clamp-2" style={{ color: getTextColorForBackground(cardBgColor), ...getDynamicFontStyles(fontSize).product }}>Burger</div>
+                        <div className="font-bold mt-auto" style={{ color: themeColor, ...getDynamicFontStyles(fontSize).price }}>210 ₺</div>
                       </div>
-                      <div className={`p-2 border-2 shadow-sm`} style={{ borderColor: themeColor, backgroundColor: cardBgColor, borderRadius: buttonShape === 'pill' ? '12px' : buttonShape === 'rounded' ? '8px' : '0' }}>
-                        <div className="w-full h-12 bg-black/10 mb-2" style={{ borderRadius: buttonShape === 'pill' ? '8px' : buttonShape === 'rounded' ? '4px' : '0' }}></div>
-                        <div className="h-1.5 w-2/3 bg-black/20 rounded"></div>
+                      <div className={`p-3 border-2 shadow-sm flex flex-col`} style={{ borderColor: themeColor, backgroundColor: cardBgColor, borderRadius: buttonShape === 'pill' ? '12px' : buttonShape === 'rounded' ? '8px' : '0' }}>
+                        <div className="w-full h-24 bg-black/10 mb-3 flex items-center justify-center overflow-hidden" style={{ borderRadius: buttonShape === 'pill' ? '8px' : buttonShape === 'rounded' ? '4px' : '0' }}>
+                          <span className="text-3xl">🍹</span>
+                        </div>
+                        <div className="font-bold mb-1 line-clamp-2" style={{ color: getTextColorForBackground(cardBgColor), ...getDynamicFontStyles(fontSize).product }}>Limonata</div>
+                        <div className="font-bold mt-auto" style={{ color: themeColor, ...getDynamicFontStyles(fontSize).price }}>85 ₺</div>
                       </div>
                     </div>
                   )}

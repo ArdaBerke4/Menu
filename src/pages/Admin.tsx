@@ -868,10 +868,10 @@ export default function Admin() {
             <button onClick={() => setActiveTab('dashboard')} className="mt-2 text-sm text-brand underline hover:text-admin-text">← Tüm Mekanlarıma Dön</button>
           </div>
           <nav className="flex flex-col gap-3 flex-grow">
-            <button onClick={() => setActiveTab('menu')} className={`text-left px-4 py-3 border-2 border-admin-border transition-all ${activeTab === 'menu' ? 'bg-brand text-surface shadow-admin-pixel' : 'bg-brand-light text-admin-text hover:bg-admin-surface'}`}>Envanter (Menü)</button>
-            <button onClick={() => setActiveTab('campaigns')} className={`text-left px-4 py-3 border-2 border-admin-border transition-all ${activeTab === 'campaigns' ? 'bg-brand text-surface shadow-admin-pixel' : 'bg-brand-light text-admin-text hover:bg-admin-surface'}`}>Kampanya Düzenle 🏷️</button>
-            <button onClick={() => setActiveTab('about')} className={`text-left px-4 py-3 border-2 border-admin-border transition-all ${activeTab === 'about' ? 'bg-brand text-surface shadow-admin-pixel' : 'bg-brand-light text-admin-text hover:bg-admin-surface'}`}>Restoran Hakkında</button>
-            <button onClick={() => setActiveTab('settings')} className={`text-left px-4 py-3 border-2 border-admin-border transition-all ${activeTab === 'settings' ? 'bg-brand text-surface shadow-admin-pixel' : 'bg-brand-light text-admin-text hover:bg-admin-surface'}`}>Görünüm Ayarları</button>
+            <button onClick={() => setActiveTab('menu')} className={`text-left px-4 py-3 border-2 border-admin-border transition-all ${activeTab === 'menu' ? 'bg-admin-primary text-admin-primary-text shadow-admin-pixel' : 'bg-admin-surface text-admin-text hover:bg-admin-sidebar-hover'}`}>Envanter (Menü)</button>
+            <button onClick={() => setActiveTab('campaigns')} className={`text-left px-4 py-3 border-2 border-admin-border transition-all ${activeTab === 'campaigns' ? 'bg-admin-primary text-admin-primary-text shadow-admin-pixel' : 'bg-admin-surface text-admin-text hover:bg-admin-sidebar-hover'}`}>Kampanya Düzenle 🏷️</button>
+            <button onClick={() => setActiveTab('about')} className={`text-left px-4 py-3 border-2 border-admin-border transition-all ${activeTab === 'about' ? 'bg-admin-primary text-admin-primary-text shadow-admin-pixel' : 'bg-admin-surface text-admin-text hover:bg-admin-sidebar-hover'}`}>Restoran Hakkında</button>
+            <button onClick={() => setActiveTab('settings')} className={`text-left px-4 py-3 border-2 border-admin-border transition-all ${activeTab === 'settings' ? 'bg-admin-primary text-admin-primary-text shadow-admin-pixel' : 'bg-admin-surface text-admin-text hover:bg-admin-sidebar-hover'}`}>Görünüm Ayarları</button>
           </nav>
           <div className="mt-auto pt-6 border-t-4 border-admin-border space-y-3">
             {renderThemePicker()}
@@ -879,13 +879,13 @@ export default function Admin() {
               <>
                 <button
                   onClick={() => window.open(`/pos/${selectedRestaurant.id}`, '_blank')}
-                  className="w-full px-2 py-3 bg-brand text-surface border-2 border-admin-border font-bold uppercase text-sm hover:opacity-90 active:translate-y-1 shadow-admin-pixel-sm"
+                  className="w-full px-2 py-3 bg-admin-primary text-admin-primary-text border-2 border-admin-border font-bold uppercase text-sm hover:opacity-90 active:translate-y-1 shadow-admin-pixel-sm"
                 >
                   🏪 Masa & Sipariş Yönetimi
                 </button>
                 <button
                   onClick={() => navigate(`/qr/${selectedRestaurant.id}`)}
-                  className="w-full px-2 py-2 bg-brand-light text-admin-text border-2 border-admin-border font-bold uppercase text-sm hover:bg-admin-surface active:translate-y-1 shadow-admin-pixel-sm"
+                  className="w-full px-2 py-2 bg-admin-surface text-admin-text border-2 border-admin-border font-bold uppercase text-sm hover:bg-admin-surface active:translate-y-1 shadow-admin-pixel-sm"
                 >
                   QR Özelleştir ✦
                 </button>

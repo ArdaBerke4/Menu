@@ -6,6 +6,7 @@ const Admin = lazy(() => import('./pages/Admin'));
 const Auth = lazy(() => import('./pages/Auth'));
 const QRCustomizer = lazy(() => import('./pages/QRCustomizer'));
 const ManagementDashboard = lazy(() => import('./pages/ManagementDashboard'));
+const StaffLogin = lazy(() => import('./pages/StaffLogin'));
 
 function LoadingFallback() {
   return (
@@ -32,6 +33,9 @@ function App() {
           
           {/* Masa ve Sipariş Yönetimi (POS) */}
           <Route path="/pos/:restaurantId" element={<ManagementDashboard />} />
+          
+          {/* Personel (Garson/Şef) Girişi (Dinamik Link) */}
+          <Route path="/staff/:restaurantId" element={<StaffLogin />} />
           
           {/* Müşteriler İçin (Dinamik Link) */}
           <Route path="/menu/:slug" element={<Menu />} />

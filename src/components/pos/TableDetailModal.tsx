@@ -15,6 +15,7 @@ interface TableDetailModalProps {
   menuUrl: string;
   onClose: () => void;
   showToast: (msg: string, type?: 'success' | 'error') => void;
+  staffRole?: 'admin' | 'waiter' | 'chef' | null;
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
@@ -28,7 +29,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
 // No longer need NEXT_STATUS for direct delivery
 
 export function TableDetailModal({
-  table, orders, orderItems, categories: _categories, products: _products, restaurant, restaurantAddress, menuUrl, onClose, showToast
+  table, orders, orderItems, categories: _categories, products: _products, restaurant, restaurantAddress, menuUrl, onClose, showToast, staffRole
 }: TableDetailModalProps) {
   const [activeSection, setActiveSection] = useState<'orders' | 'qr'>('orders');
   const [isEditingLabel, setIsEditingLabel] = useState(false);
@@ -86,6 +87,10 @@ export function TableDetailModal({
   };
 
   const handleMarkPaid = async () => {
+    if (staffRole === 'chef') {
+      showToast('Şefler hesap kapatamaz.', 'error');
+      return;
+    }
     for (const order of tableOrders) {
       await supabase.from('orders').update({ status: 'paid', updated_at: new Date().toISOString() }).eq('id', order.id);
     }
@@ -167,12 +172,16 @@ export function TableDetailModal({
                   <h2 className="text-3xl font-bold text-brand-dark">
                     {table.label || `Masa ${table.table_number}`}
                   </h2>
-                  <button onClick={() => setIsEditingLabel(true)} className="text-brand-dark/50 hover:text-brand-dark text-lg p-1" title="İsmi Düzenle">
-                    ✎
-                  </button>
-                  <button onClick={handleDeleteTable} className="text-red-500/50 hover:text-red-600 text-lg p-1" title="Masayı Sil">
-                    🗑️
-                  </button>
+                  {staffRole === 'admin' && (
+                    <button onClick={() => setIsEditingLabel(true)} className="text-brand-dark/50 hover:text-brand-dark text-lg p-1" title="İsmi Düzenle">
+                      ✎
+                    </button>
+                  )}
+                  {staffRole === 'admin' && (
+                    <button onClick={handleDeleteTable} className="text-red-500/50 hover:text-red-600 text-lg p-1" title="Masayı Sil">
+                      🗑️
+                    </button>
+                  )}
                 </div>
               )}
               <p className="text-sm font-bold text-brand-dark/50 mt-1">
@@ -250,12 +259,14 @@ export function TableDetailModal({
                         {/* Sipariş kalemleri */}
                         <div className="divide-y divide-brand-dark/10">
                           {items.map(item => {
-                            const canAdvance = item.status !== 'delivered' && item.status !== 'cancelled';
+                            const canAdvance = item.status !== 'delivered' && item.status !== 'cancelled' && (staffRole === 'admin' || (staffRole === 'waiter' && item.status === 'ready'));
                             return (
                               <div key={item.id} className="flex items-center gap-3 px-4 py-3">
                                 <div className="flex-1 min-w-0">
                                   <p className={`font-bold ${item.status === 'cancelled' ? 'line-through opacity-40' : 'text-brand-dark'}`}>
                                     {item.quantity}x {item.product_name}
+                                    {item.status === 'preparing' && <span className="ml-2 text-[10px] bg-orange-100 text-orange-700 px-1.5 py-0.5 border border-orange-300">Şef Hazırlıyor</span>}
+                                    {item.status === 'ready' && <span className="ml-2 text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 border border-green-300">Hazır</span>}
                                   </p>
                                   {item.selected_options && item.selected_options.length > 0 && (
                                     <p className="text-xs text-brand-dark/70 font-bold mt-0.5">
@@ -320,7 +331,7 @@ export function TableDetailModal({
                   <p className="text-sm font-bold text-brand-dark/50 max-w-xs">{restaurantAddress}</p>
                 )}
               </div>
-              <p className="text-xs font-bold text-brand-dark/30 break-all text-center max-w-xs">{qrUrl}</p>
+              <a href={qrUrl} target="_blank" rel="noreferrer" className="text-xs font-bold text-brand hover:underline break-all text-center max-w-xs">{qrUrl}</a>
               
               <div className="flex gap-3 mt-2">
                 <button

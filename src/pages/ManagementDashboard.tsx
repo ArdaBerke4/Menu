@@ -6,8 +6,12 @@ import { TableCard } from '../components/pos/TableCard';
 import { TableDetailModal } from '../components/pos/TableDetailModal';
 import { PriorityOrdersModal } from '../components/pos/PriorityOrdersModal';
 import { StatisticsModal } from '../components/pos/StatisticsModal';
+import { ChefDashboard } from '../components/pos/ChefDashboard';
+import QRCodeStyling from 'qr-code-styling';
+import { useRef } from 'react';
 import type { Table } from '../types/pos';
 import type { Category, Product } from '../types/admin';
+import { getStaffToken } from '../utils/auth';
 
 export default function ManagementDashboard() {
   const { restaurantId } = useParams();
@@ -23,6 +27,10 @@ export default function ManagementDashboard() {
   const [showStatistics, setShowStatistics] = useState(false);
   const [addLoading, setAddLoading] = useState(false);
   const [restaurant, setRestaurant] = useState<any>(null);
+  const [staffRole, setStaffRole] = useState<'admin' | 'waiter' | 'chef' | null>(null);
+  const [showStaffQR, setShowStaffQR] = useState(false);
+  const waiterQrRef = useRef<HTMLDivElement>(null);
+  const chefQrRef = useRef<HTMLDivElement>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const { tables, orders, orderItems, loading } = useRealtimeOrders(restaurantId);
@@ -31,6 +39,19 @@ export default function ManagementDashboard() {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
   };
+
+  // Rol Kontrolü
+  useEffect(() => {
+    const role = localStorage.getItem(`staff_role_${restaurantId}`);
+    if (role === 'waiter' || role === 'chef') {
+      setStaffRole(role);
+    } else {
+      supabase.auth.getUser().then(({ data }) => {
+        if (data.user) setStaffRole('admin');
+        else navigate('/auth');
+      });
+    }
+  }, [restaurantId, navigate]);
 
   // Aktif masanın güncel kalmasını sağla (İsim değişimi vb. realtime güncellemeler için)
   useEffect(() => {
@@ -61,6 +82,31 @@ export default function ManagementDashboard() {
     };
     load();
   }, [restaurantId]);
+
+  // QR Kodları Oluştur
+  useEffect(() => {
+    if (showStaffQR && restaurantId) {
+      const baseUrl = window.location.origin;
+      const token = getStaffToken(restaurantId);
+      const waiterUrl = `${baseUrl}/staff/${restaurantId}?role=waiter&token=${token}`;
+      const chefUrl = `${baseUrl}/staff/${restaurantId}?role=chef&token=${token}`;
+
+      const options = {
+        width: 200, height: 200,
+        dotsOptions: { color: '#000', type: 'rounded' as any },
+        backgroundOptions: { color: '#fff' }
+      };
+
+      if (waiterQrRef.current) {
+        waiterQrRef.current.innerHTML = '';
+        new QRCodeStyling({ ...options, data: waiterUrl }).append(waiterQrRef.current);
+      }
+      if (chefQrRef.current) {
+        chefQrRef.current.innerHTML = '';
+        new QRCodeStyling({ ...options, data: chefUrl }).append(chefQrRef.current);
+      }
+    }
+  }, [showStaffQR, restaurantId]);
 
   // Toplu masa ekle
   const handleAddTables = async () => {
@@ -121,6 +167,24 @@ export default function ManagementDashboard() {
 
   const menuUrl = restaurant ? `${window.location.origin}/menu/${restaurant.slug || restaurant.id}` : '';
 
+  if (staffRole === null) return null;
+
+  if (staffRole === 'chef') {
+    return (
+      <ChefDashboard 
+        orders={orders}
+        orderItems={orderItems}
+        tables={tables}
+        showToast={showToast}
+        staffRole={staffRole}
+        onLogout={() => {
+          localStorage.removeItem(`staff_role_${restaurantId}`);
+          navigate(`/menu/${restaurant?.slug || restaurantId}`);
+        }}
+      />
+    );
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-surface font-pixel flex items-center justify-center text-2xl text-brand-dark">
@@ -148,6 +212,15 @@ export default function ManagementDashboard() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {staffRole === 'admin' && (
+              <button
+                onClick={() => setShowStaffQR(true)}
+                className="px-4 py-2 bg-purple-100 text-purple-800 border-2 border-purple-500 font-bold hover:bg-purple-200 shadow-pixel-sm active:translate-y-0.5"
+              >
+                QR Personel
+              </button>
+            )}
+            
             <button
               onClick={() => setShowPriorityOrders(true)}
               className="relative px-5 py-2 bg-yellow-100 text-yellow-800 border-2 border-yellow-500 font-bold hover:bg-yellow-200 shadow-pixel-sm transition-all active:translate-y-0.5"
@@ -159,18 +232,33 @@ export default function ManagementDashboard() {
                 </span>
               )}
             </button>
-            <button
-              onClick={() => setShowStatistics(true)}
-              className="px-5 py-2 bg-blue-100 text-blue-800 border-2 border-blue-500 font-bold hover:bg-blue-200 shadow-pixel-sm transition-all active:translate-y-0.5"
-            >
-              📊 İstatistikler
-            </button>
-            <button
-              onClick={() => setShowAddTable(true)}
-              className="px-5 py-2 bg-[#8fb38a] text-brand-dark border-2 border-brand-dark font-bold hover:bg-[#a3c79e] shadow-pixel-sm transition-all active:translate-y-0.5"
-            >
-              + Masa Ekle
-            </button>
+            {staffRole === 'admin' && (
+              <button
+                onClick={() => setShowStatistics(true)}
+                className="px-5 py-2 bg-blue-100 text-blue-800 border-2 border-blue-500 font-bold hover:bg-blue-200 shadow-pixel-sm transition-all active:translate-y-0.5"
+              >
+                📊 İstatistikler
+              </button>
+            )}
+            {staffRole === 'admin' && (
+              <button
+                onClick={() => setShowAddTable(true)}
+                className="px-5 py-2 bg-[#8fb38a] text-brand-dark border-2 border-brand-dark font-bold hover:bg-[#a3c79e] shadow-pixel-sm transition-all active:translate-y-0.5"
+              >
+                + Masa Ekle
+              </button>
+            )}
+            {staffRole === 'waiter' && (
+              <button
+                onClick={() => {
+                  localStorage.removeItem(`staff_role_${restaurantId}`);
+                  navigate(`/menu/${restaurant?.slug || restaurantId}`);
+                }}
+                className="px-4 py-2 bg-red-100 text-red-800 border-2 border-red-500 font-bold hover:bg-red-200 shadow-pixel-sm active:translate-y-0.5"
+              >
+                Çıkış Yap
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -236,6 +324,7 @@ export default function ManagementDashboard() {
           menuUrl={menuUrl}
           onClose={() => setSelectedTable(null)}
           showToast={showToast}
+          staffRole={staffRole}
         />
       )}
 
@@ -294,6 +383,39 @@ export default function ManagementDashboard() {
           restaurantId={restaurantId}
           onClose={() => setShowStatistics(false)}
         />
+      )}
+
+      {/* PERSONEL QR MODAL */}
+      {showStaffQR && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-surface border-4 border-brand-dark p-6 w-full max-w-2xl shadow-2xl relative">
+            <button onClick={() => setShowStaffQR(false)} className="absolute top-2 right-2 text-2xl font-bold p-2 hover:bg-black/5">✕</button>
+            <h2 className="text-2xl font-bold text-brand-dark mb-6 text-center uppercase">Personel QR Girişleri</h2>
+            <p className="text-center text-brand-dark/70 font-bold mb-6">Personelinizin sisteme şifresiz girmesi için kendi telefonlarından aşağıdaki QR kodlardan uygun olanını okutmasını sağlayın.</p>
+            
+            <div className="flex flex-col md:flex-row gap-8 justify-center items-center">
+              {/* Garson */}
+              <div className="bg-white border-4 border-brand-dark p-4 flex flex-col items-center">
+                <h3 className="text-xl font-bold text-brand-dark mb-4">💁 Garson Girişi</h3>
+                <div ref={waiterQrRef} className="w-[200px] h-[200px] bg-gray-100 border border-gray-200"></div>
+                <p className="text-sm font-bold text-brand-dark/50 mt-4 text-center">Masa ve siparişleri<br/>teslim etme yetkisi</p>
+                <a href={`${window.location.origin}/staff/${restaurantId}?role=waiter&token=${getStaffToken(restaurantId!)}`} target="_blank" rel="noreferrer" className="mt-2 text-xs text-brand hover:underline font-bold break-all text-center">
+                  Bağlantıyı Aç / Kopyala
+                </a>
+              </div>
+
+              {/* Şef */}
+              <div className="bg-white border-4 border-brand-dark p-4 flex flex-col items-center">
+                <h3 className="text-xl font-bold text-brand-dark mb-4">👨‍🍳 Şef (Mutfak) Girişi</h3>
+                <div ref={chefQrRef} className="w-[200px] h-[200px] bg-gray-100 border border-gray-200"></div>
+                <p className="text-sm font-bold text-brand-dark/50 mt-4 text-center">Sadece mutfak sipariş<br/>ekranı (KDS) yetkisi</p>
+                <a href={`${window.location.origin}/staff/${restaurantId}?role=chef&token=${getStaffToken(restaurantId!)}`} target="_blank" rel="noreferrer" className="mt-2 text-xs text-brand hover:underline font-bold break-all text-center">
+                  Bağlantıyı Aç / Kopyala
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* TOAST */}

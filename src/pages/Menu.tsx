@@ -156,13 +156,14 @@ const detectLang = (): LangCode => {
 // -------------------
 
 // Yazı boyutu Tailwind sınıfları
-const getFontSizeClasses = (size?: string) => {
-  switch (size) {
-    case 'small':  return { cat: 'text-lg',  product: 'text-lg',  desc: 'text-sm',  price: 'text-lg'  };
-    case 'large':  return { cat: 'text-3xl', product: 'text-3xl', desc: 'text-xl',  price: 'text-2xl' };
-    case 'xlarge': return { cat: 'text-4xl', product: 'text-4xl', desc: 'text-2xl', price: 'text-3xl' };
-    default:       return { cat: 'text-2xl', product: 'text-2xl', desc: 'text-lg',  price: 'text-xl'  };
-  }
+const getDynamicFontStyles = (size?: string) => {
+  const baseSize = parseInt(size || '16') || (size === 'small' ? 14 : size === 'large' ? 20 : size === 'xlarge' ? 24 : 16);
+  return {
+    cat: { fontSize: `${baseSize * 1.25}px` },
+    product: { fontSize: `${baseSize}px` },
+    desc: { fontSize: `${Math.max(10, baseSize * 0.75)}px` },
+    price: { fontSize: `${baseSize * 1.125}px` },
+  };
 };
 
 export default function Menu() {
@@ -526,7 +527,7 @@ export default function Menu() {
 
   const themeColor = restaurant.primary_color || '#8B5A2B';
   const cardBgColor = restaurant.card_bg_color || '#FFFFFF';
-  const fs = getFontSizeClasses(restaurant.font_size);
+  const fs = getDynamicFontStyles(restaurant.font_size);
 
   const mapsUrl = restaurant.address
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(restaurant.address)}`
@@ -677,7 +678,7 @@ export default function Menu() {
                 <div key={category.id} className="space-y-4">
                   <div
                     className={`text-surface px-6 py-2 border-2 inline-block font-bold uppercase shadow-sm ${radiusClass} ${fs.cat}`}
-                    style={{ backgroundColor: themeColor, borderColor: themeColor }}
+                    style={{ backgroundColor: themeColor, borderColor: themeColor, ...fs.cat }}
                   >
                     {translations[category.name] || category.name}
                   </div>
@@ -699,41 +700,41 @@ export default function Menu() {
                             <img src={product.image_url} alt={product.name} loading="lazy" className="w-full h-full object-cover" />
                           </div>
                         )}
-                        <div className="flex-1 flex flex-col justify-center">
-                          <h3 className={`font-bold uppercase leading-none mb-2 ${fs.product}`} style={{ color: themeColor }}>
+                        <div className="flex-1 flex flex-col min-w-0">
+                          <h3 className="font-bold uppercase leading-tight mb-1 line-clamp-2" style={{ color: themeColor, ...fs.product }}>
                             {translations[product.name] || product.name}
                           </h3>
                           {product.description && (
-                            <p className={`text-ink/80 leading-snug ${fs.desc}`}>{translations[product.description] || product.description}</p>
+                            <p className="opacity-70 leading-relaxed mb-3 line-clamp-2" style={fs.desc}>{translations[product.description] || product.description}</p>
                           )}
-                        </div>
-                        <div className="flex flex-col justify-between items-end shrink-0 gap-2">
-                          {priceInfo.discounted !== null ? (
-                            <>
-                              <span className="text-xs font-bold px-2 py-0.5 bg-red-500 text-white" style={{ borderRadius: borderRadiusValue }}>%{priceInfo.percent}</span>
-                              <span className="line-through opacity-50 text-sm font-bold" style={{ color: themeColor }}>{priceInfo.original} ₺</span>
-                              <div
-                                className={`bg-white border-2 px-3 py-1 font-bold whitespace-nowrap ${radiusClass} ${fs.price}`}
-                                style={{ borderColor: themeColor, color: themeColor }}
-                              >
-                                {priceInfo.discounted} ₺
-                              </div>
-                            </>
-                          ) : (
-                            <div
-                              className={`bg-white border-2 px-3 py-1 font-bold whitespace-nowrap ${radiusClass} ${fs.price}`}
-                              style={{ borderColor: themeColor, color: themeColor }}
-                            >
-                              {product.price} ₺
+                          <div className="mt-auto pt-2 flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {priceInfo.discounted !== null ? (
+                                <>
+                                  <span className="text-xs font-bold px-2 py-0.5 bg-red-500 text-white" style={{ borderRadius: borderRadiusValue }}>%{priceInfo.percent}</span>
+                                  <span className="line-through opacity-50 text-sm font-bold" style={{ color: themeColor }}>{priceInfo.original} ₺</span>
+                                  <div
+                                    className={`bg-white border-2 px-3 py-1 font-bold whitespace-nowrap ${radiusClass}`} style={{ borderColor: themeColor, color: themeColor, ...fs.price }}
+                                  >
+                                    {priceInfo.discounted} ₺
+                                  </div>
+                                </>
+                              ) : (
+                                <div
+                                  className={`bg-white border-2 px-3 py-1 font-bold whitespace-nowrap ${radiusClass}`} style={{ borderColor: themeColor, color: themeColor, ...fs.price }}
+                                >
+                                  {product.price} ₺
+                                </div>
+                              )}
                             </div>
-                          )}
-                          <button
-                            onClick={() => handleAddToCartClick(product)}
-                            className={`w-10 h-10 flex items-center justify-center border-2 font-bold text-2xl transition-all hover:scale-105 active:scale-95 ${radiusClass}`}
-                            style={{ borderColor: themeColor, backgroundColor: themeColor, color: 'white' }}
-                          >
-                            +
-                          </button>
+                            <button
+                              onClick={() => handleAddToCartClick(product)}
+                              className={`w-10 h-10 shrink-0 flex items-center justify-center border-2 font-bold text-2xl transition-all hover:scale-105 active:scale-95 ${radiusClass}`}
+                              style={{ borderColor: themeColor, backgroundColor: themeColor, color: 'white' }}
+                            >
+                              +
+                            </button>
+                          </div>
                         </div>
                       </div>
                       );
