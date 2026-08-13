@@ -63,11 +63,11 @@ export default function ManagementDashboard() {
     }
   }, [restaurantId, navigate]);
 
-  // Aktif masanın güncel kalmasını sağla (İsim değişimi vb. realtime güncellemeler için)
+  // Aktif masanın güncel kalmasını sağla (İsim değişimi, garson çağırma, hesap isteme vb. realtime güncellemeler için)
   useEffect(() => {
     if (selectedTable) {
       const updatedTable = tables.find(t => t.id === selectedTable.id);
-      if (updatedTable && updatedTable.label !== selectedTable.label) {
+      if (updatedTable && JSON.stringify(updatedTable) !== JSON.stringify(selectedTable)) {
         setSelectedTable(updatedTable);
       }
     }

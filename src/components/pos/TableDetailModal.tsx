@@ -257,87 +257,93 @@ export function TableDetailModal({
                   <p className="text-lg">Bu masada aktif sipariş yok</p>
                 </div>
               ) : (
-                <>
-                  {tableOrders.map(order => {
-                    const items = orderItems.filter(i => i.order_id === order.id);
-                    const orderTotal = items.filter(i => i.status !== 'cancelled').reduce((s, i) => s + i.unit_price * i.quantity, 0);
-                    const statusInfo = STATUS_LABELS[order.status] || STATUS_LABELS.pending;
-
-                    return (
-                      <div key={order.id} className="border-2 border-brand-dark bg-white">
-                        {/* Sipariş başlığı */}
-                        <div className="flex items-center justify-between px-4 py-3 border-b border-brand-dark/20 bg-gray-50">
-                          <div className="flex items-center gap-3">
-                            <span className={`text-xs font-bold px-2 py-1 border ${statusInfo.color}`}>
-                              {statusInfo.label}
-                            </span>
-                            <span className="text-xs text-brand-dark/40 font-bold">
-                              {order.created_at ? new Date(order.created_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : ''}
-                            </span>
-                          </div>
-                          <span className="font-bold text-brand-dark">₺{orderTotal.toFixed(0)}</span>
-                        </div>
-
-                        {/* Sipariş kalemleri */}
-                        <div className="divide-y divide-brand-dark/10">
-                          {items.map(item => {
-                            const canAdvance = item.status !== 'delivered' && item.status !== 'cancelled' && (staffRole === 'admin' || (staffRole === 'waiter' && item.status === 'ready'));
-                            return (
-                              <div key={item.id} className="flex items-center gap-3 px-4 py-3">
-                                <div className="flex-1 min-w-0">
-                                  <p className={`font-bold ${item.status === 'cancelled' ? 'line-through opacity-40' : 'text-brand-dark'}`}>
-                                    {item.quantity}x {item.product_name}
-                                    {item.status === 'preparing' && <span className="ml-2 text-[10px] bg-orange-100 text-orange-700 px-1.5 py-0.5 border border-orange-300">Şef Hazırlıyor</span>}
-                                    {item.status === 'ready' && <span className="ml-2 text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 border border-green-300">Hazır</span>}
-                                  </p>
-                                  {item.selected_options && item.selected_options.length > 0 && (
-                                    <p className="text-xs text-brand-dark/70 font-bold mt-0.5">
-                                      {item.selected_options.map((o: any) => o.choiceName).join(', ')}
-                                    </p>
-                                  )}
-                                  {item.note && <p className="text-xs text-brand-dark/50 italic mt-0.5 font-bold">"{item.note}"</p>}
-                                </div>
-                                <span className="text-sm font-bold text-brand-dark/60 shrink-0">
-                                  ₺{(item.unit_price * item.quantity).toFixed(0)}
-                                </span>
-                                {canAdvance && (
-                                  <button
-                                    onClick={() => handleItemStatusChange(item)}
-                                    className={`text-xs font-bold px-3 py-1.5 border-2 transition-colors hover:scale-105 bg-green-100 text-green-700 border-green-500`}
-                                    title={`Teslim Edildi olarak işaretle`}
-                                  >
-                                    ✓
-                                  </button>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-
-                        {/* Sipariş notu */}
-                        {order.note && (
-                          <div className="px-4 py-2 border-t border-brand-dark/10 bg-yellow-50 text-sm italic font-bold text-yellow-800">
-                            Not: {order.note}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-
-                  {/* Toplam ve hesap kapat */}
-                  <div className="border-4 border-brand-dark bg-[#F4E4C1] p-5 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xl font-bold text-brand-dark uppercase">Toplam</span>
-                      <span className="text-3xl font-bold text-brand-dark">₺{totalAmount.toFixed(0)}</span>
+                <div className="flex flex-col gap-4">
+                  {/* ADİSYON / FİŞ TASARIMI */}
+                  <div className="bg-[#fdfbf7] p-6 border-2 border-brand-dark font-mono text-sm leading-relaxed text-[#1a1a1a] shadow-md relative overflow-hidden">
+                    {/* Tırtıklı üst kenar efekti (basit) */}
+                    <div className="absolute top-0 left-0 right-0 h-2 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4IiBoZWlnaHQ9IjgiPjxwb2x5Z29uIHBvaW50cz0iMCwwIDQsOCA4LDAiIGZpbGw9IiNmNGU0YzEiLz48L3N2Zz4=')] bg-repeat-x"></div>
+                    
+                    <div className="text-center mb-6 mt-2 border-b-2 border-dashed border-[#1a1a1a]/30 pb-4">
+                      <h3 className="font-bold text-2xl tracking-widest mb-1">ADİSYON</h3>
+                      <p className="text-xs opacity-70">Tarih: {new Date().toLocaleDateString('tr-TR')}</p>
                     </div>
-                    <button
-                      onClick={handleMarkPaid}
-                      className="w-full py-4 bg-[#8fb38a] text-brand-dark border-2 border-brand-dark font-bold text-lg hover:bg-[#a3c79e] shadow-pixel transition-all active:translate-y-0.5"
-                    >
-                      Hesabı Kapat ✓
-                    </button>
+
+                    <div className="space-y-6">
+                      {tableOrders.map(order => {
+                        const items = orderItems.filter(i => i.order_id === order.id);
+                        const statusInfo = STATUS_LABELS[order.status] || STATUS_LABELS.pending;
+
+                        return (
+                          <div key={order.id} className="space-y-3">
+                            {/* Sipariş Zamanı ve Durumu */}
+                            <div className="flex items-center justify-between text-xs opacity-60 border-b border-dashed border-[#1a1a1a]/20 pb-1">
+                              <span>Sipariş: {order.created_at ? new Date(order.created_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                              <span className="uppercase font-bold">{statusInfo.label}</span>
+                            </div>
+
+                            {/* Kalemler */}
+                            <div className="space-y-3">
+                              {items.map(item => {
+                                const canAdvance = item.status !== 'delivered' && item.status !== 'cancelled' && (staffRole === 'admin' || (staffRole === 'waiter' && item.status === 'ready'));
+                                return (
+                                  <div key={item.id} className="flex items-start justify-between gap-2">
+                                    <div className="flex-1 min-w-0">
+                                      <p className={`font-bold ${item.status === 'cancelled' ? 'line-through opacity-40' : ''}`}>
+                                        {item.quantity}x {item.product_name}
+                                        {item.status === 'preparing' && <span className="ml-2 text-[10px] bg-orange-100 text-orange-700 px-1 py-0.5 border border-orange-300 font-sans">Hazırlanıyor</span>}
+                                        {item.status === 'ready' && <span className="ml-2 text-[10px] bg-green-100 text-green-700 px-1 py-0.5 border border-green-300 font-sans">Hazır</span>}
+                                      </p>
+                                      {item.selected_options && item.selected_options.length > 0 && (
+                                        <p className="text-xs opacity-70 mt-0.5 pl-4">
+                                          - {item.selected_options.map((o: any) => o.choiceName).join(', ')}
+                                        </p>
+                                      )}
+                                      {item.note && <p className="text-xs opacity-70 italic mt-0.5 pl-4 font-bold">"{item.note}"</p>}
+                                      
+                                      {canAdvance && (
+                                        <button
+                                          onClick={() => handleItemStatusChange(item)}
+                                          className={`mt-1 text-[10px] font-sans font-bold px-2 py-1 transition-colors hover:scale-105 bg-green-100 text-green-700 border border-green-500 rounded`}
+                                          title={`Teslim Edildi olarak işaretle`}
+                                        >
+                                          ✓ Teslim Edildi
+                                        </button>
+                                      )}
+                                    </div>
+                                    <span className="font-bold shrink-0">
+                                      ₺{(item.unit_price * item.quantity).toFixed(0)}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+
+                            {/* Sipariş Notu */}
+                            {order.note && (
+                              <div className="mt-2 text-xs italic font-bold border border-dashed border-[#1a1a1a]/30 p-2 bg-black/5">
+                                Not: {order.note}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Fiş Altı - Toplam */}
+                    <div className="mt-8 pt-4 border-t-2 border-dashed border-[#1a1a1a] flex justify-between items-center text-xl font-bold tracking-wider">
+                      <span>TOPLAM</span>
+                      <span>₺{totalAmount.toFixed(0)}</span>
+                    </div>
                   </div>
-                </>
+
+                  {/* Hesap Kapat Butonu */}
+                  <button
+                    onClick={handleMarkPaid}
+                    className="w-full py-4 bg-[#8fb38a] text-brand-dark border-4 border-brand-dark font-bold text-xl hover:bg-[#a3c79e] shadow-pixel transition-all active:translate-y-0.5 uppercase tracking-wider"
+                  >
+                    Hesabı Kapat ✓
+                  </button>
+                </div>
               )}
             </>
           )}
