@@ -6,6 +6,7 @@ export interface Table {
   capacity: number;
   status: 'empty' | 'occupied' | 'reserved';
   needs_waiter?: boolean;
+  wants_bill?: 'cash' | 'card' | null;
   created_at?: string;
 }
 

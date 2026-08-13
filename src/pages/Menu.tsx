@@ -59,6 +59,11 @@ const T: Record<LangCode, {
   orderSuccess: string;
   callWaiter: string;
   waiterCalled: string;
+  requestBill: string;
+  billRequested: string;
+  selectPaymentMethod: string;
+  cash: string;
+  creditCard: string;
 }> = {
   tr: {
     subtitle: '~ Dijital Menü ~',
@@ -73,6 +78,8 @@ const T: Record<LangCode, {
     cart: 'Sepetim', total: 'Toplam', emptyCart: 'Sepetiniz boş.',
     sendOrder: 'Siparişi Gönder', orderSuccess: 'Siparişiniz alındı! ✓',
     callWaiter: 'Garson Çağır', waiterCalled: 'Garson Çağrıldı! 🔔',
+    requestBill: 'Hesap İste', billRequested: 'Hesap İstendi! 🧾',
+    selectPaymentMethod: 'Ödeme Yöntemi Seçin', cash: 'Nakit 💵', creditCard: 'Kredi Kartı 💳',
   },
   en: {
     subtitle: '~ Digital Menu ~',
@@ -87,6 +94,8 @@ const T: Record<LangCode, {
     cart: 'My Cart', total: 'Total', emptyCart: 'Your cart is empty.',
     sendOrder: 'Send Order', orderSuccess: 'Order received! ✓',
     callWaiter: 'Call Waiter', waiterCalled: 'Waiter Called! 🔔',
+    requestBill: 'Request Bill', billRequested: 'Bill Requested! 🧾',
+    selectPaymentMethod: 'Select Payment Method', cash: 'Cash 💵', creditCard: 'Credit Card 💳',
   },
   de: {
     subtitle: '~ Digitale Speisekarte ~',
@@ -101,6 +110,8 @@ const T: Record<LangCode, {
     cart: 'Warenkorb', total: 'Gesamt', emptyCart: 'Warenkorb ist leer.',
     sendOrder: 'Bestellung Senden', orderSuccess: 'Bestellung erhalten! ✓',
     callWaiter: 'Kellner Rufen', waiterCalled: 'Kellner Gerufen! 🔔',
+    requestBill: 'Rechnung Anfordern', billRequested: 'Rechnung Angefordert! 🧾',
+    selectPaymentMethod: 'Zahlungsmethode Wählen', cash: 'Bargeld 💵', creditCard: 'Kreditkarte 💳',
   },
   ar: {
     subtitle: '~ القائمة الرقمية ~',
@@ -115,6 +126,8 @@ const T: Record<LangCode, {
     cart: 'عربة التسوق', total: 'المجموع', emptyCart: 'عربة التسوق فارغة.',
     sendOrder: 'إرسال الطلب', orderSuccess: 'تم استلام الطلب! ✓',
     callWaiter: 'استدعاء النادل', waiterCalled: 'تم استدعاء النادل! 🔔',
+    requestBill: 'طلب الفاتورة', billRequested: 'تم طلب الفاتورة! 🧾',
+    selectPaymentMethod: 'اختر طريقة الدفع', cash: 'نقداً 💵', creditCard: 'بطاقة ائتمان 💳',
   },
   ru: {
     subtitle: '~ Цифровое Меню ~',
@@ -129,6 +142,8 @@ const T: Record<LangCode, {
     cart: 'Корзина', total: 'Итого', emptyCart: 'Ваша корзина пуста.',
     sendOrder: 'Отправить Заказ', orderSuccess: 'Заказ принят! ✓',
     callWaiter: 'Позвать Официанта', waiterCalled: 'Официант Вызван! 🔔',
+    requestBill: 'Попросить Счет', billRequested: 'Счет Запрошен! 🧾',
+    selectPaymentMethod: 'Выберите способ оплаты', cash: 'Наличные 💵', creditCard: 'Кредитная Карта 💳',
   },
   fr: {
     subtitle: '~ Menu Numérique ~',
@@ -143,6 +158,8 @@ const T: Record<LangCode, {
     cart: 'Mon Panier', total: 'Total', emptyCart: 'Votre panier est vide.',
     sendOrder: 'Envoyer la Commande', orderSuccess: 'Commande reçue! ✓',
     callWaiter: 'Appeler le Serveur', waiterCalled: 'Serveur Appelé! 🔔',
+    requestBill: 'Demander l\'Addition', billRequested: 'Addition Demandée! 🧾',
+    selectPaymentMethod: 'Sélectionnez le mode de paiement', cash: 'Espèces 💵', creditCard: 'Carte de Crédit 💳',
   },
 };
 
@@ -171,6 +188,9 @@ export default function Menu() {
   const [toast, setToast] = useState<string | null>(null);
   const [isCallingWaiter, setIsCallingWaiter] = useState(false);
   const [hasCalledWaiter, setHasCalledWaiter] = useState(false);
+  const [isRequestingBill, setIsRequestingBill] = useState(false);
+  const [hasRequestedBill, setHasRequestedBill] = useState(false);
+  const [billMethodOpen, setBillMethodOpen] = useState(false);
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -299,6 +319,23 @@ export default function Menu() {
       setTimeout(() => setToast(null), 3000);
     }
     setIsCallingWaiter(false);
+  };
+
+  const handleRequestBill = async (method: 'cash' | 'card') => {
+    if (!tableId || hasRequestedBill) return;
+    setIsRequestingBill(true);
+    setBillMethodOpen(false);
+    const { error } = await supabase.from('tables').update({ wants_bill: method }).eq('id', tableId);
+    if (!error) {
+      setHasRequestedBill(true);
+      setToast(t.billRequested);
+      setTimeout(() => setToast(null), 3000);
+      setTimeout(() => setHasRequestedBill(false), 60000); // 60 sn cooldown
+    } else {
+      setToast('Hata: Hesap istenemedi');
+      setTimeout(() => setToast(null), 3000);
+    }
+    setIsRequestingBill(false);
   };
 
   const cartTotalItems = cart.reduce((acc, item) => acc + item.quantity, 0);
@@ -814,15 +851,59 @@ export default function Menu() {
 
       {/* GARSON ÇAĞIR BUTONU */}
       {tableId && (
-        <button
-          onClick={handleCallWaiter}
-          disabled={isCallingWaiter || hasCalledWaiter}
-          className="fixed bottom-24 left-6 z-50 flex items-center justify-center w-14 h-14 rounded-full border-4 shadow-pixel font-bold text-2xl hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:grayscale"
-          style={{ backgroundColor: hasCalledWaiter ? '#a3c79e' : '#F4E4C1', borderColor: themeColor, color: themeColor }}
-          title={t.callWaiter}
-        >
-          🔔
-        </button>
+        <div className="fixed bottom-24 left-6 z-50 flex flex-col gap-3">
+          <button
+            onClick={() => setBillMethodOpen(true)}
+            disabled={isRequestingBill || hasRequestedBill}
+            className="flex items-center justify-center w-14 h-14 rounded-full border-4 shadow-pixel font-bold text-2xl hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:grayscale"
+            style={{ backgroundColor: hasRequestedBill ? '#a3c79e' : '#F4E4C1', borderColor: themeColor, color: themeColor }}
+            title={t.requestBill}
+          >
+            🧾
+          </button>
+          
+          <button
+            onClick={handleCallWaiter}
+            disabled={isCallingWaiter || hasCalledWaiter}
+            className="flex items-center justify-center w-14 h-14 rounded-full border-4 shadow-pixel font-bold text-2xl hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:grayscale"
+            style={{ backgroundColor: hasCalledWaiter ? '#a3c79e' : '#F4E4C1', borderColor: themeColor, color: themeColor }}
+            title={t.callWaiter}
+          >
+            🔔
+          </button>
+        </div>
+      )}
+
+      {/* HESAP İSTE (ÖDEME YÖNTEMİ) MODAL */}
+      {billMethodOpen && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setBillMethodOpen(false)}>
+          <div 
+            className="w-full max-w-sm bg-white border-4 shadow-2xl p-6 flex flex-col"
+            style={{ borderColor: themeColor, borderRadius: borderRadiusValue }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-6 border-b-2 pb-2" style={{ borderColor: themeColor }}>
+              <h2 className="text-xl font-bold uppercase" style={{ color: themeColor }}>{t.selectPaymentMethod}</h2>
+              <button onClick={() => setBillMethodOpen(false)} className="text-3xl hover:opacity-70">✕</button>
+            </div>
+            <div className="flex flex-col gap-4">
+              <button 
+                onClick={() => handleRequestBill('cash')}
+                className="w-full py-4 text-xl font-bold border-2 transition-all hover:bg-slate-50"
+                style={{ borderColor: themeColor, color: themeColor, borderRadius: borderRadiusValue }}
+              >
+                {t.cash}
+              </button>
+              <button 
+                onClick={() => handleRequestBill('card')}
+                className="w-full py-4 text-xl font-bold border-2 transition-all hover:bg-slate-50"
+                style={{ borderColor: themeColor, color: themeColor, borderRadius: borderRadiusValue }}
+              >
+                {t.creditCard}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* SEPET BUTONU */}

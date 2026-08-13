@@ -29,17 +29,25 @@ export function TableCard({ table, orders, orderItems, onClick }: TableCardProps
   const effectiveStatus = hasActiveOrders ? 'occupied' : table.status;
   const config = statusConfig[effectiveStatus] || statusConfig.empty;
   const isCallingWaiter = table.needs_waiter;
+  const isRequestingBill = table.wants_bill;
 
-  const finalBg = isCallingWaiter ? 'bg-red-50' : config.bg;
-  const finalBorder = isCallingWaiter ? 'border-red-500 animate-pulse' : config.border;
+  const finalBg = isRequestingBill ? 'bg-amber-100' : isCallingWaiter ? 'bg-red-50' : config.bg;
+  const finalBorder = isRequestingBill ? 'border-amber-500 animate-pulse' : isCallingWaiter ? 'border-red-500 animate-pulse' : config.border;
 
   return (
     <button
       onClick={() => onClick(table)}
       className={`${finalBg} border-4 ${finalBorder} p-5 pb-8 flex flex-col items-center gap-3 transition-all hover:-translate-y-1 hover:shadow-lg active:translate-y-0 cursor-pointer text-left w-full relative`}
     >
+      {/* Hesap Uyarısı Etiketi */}
+      {isRequestingBill && (
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 whitespace-nowrap border-2 border-black z-10 animate-bounce">
+          🧾 HESAP İSTENDİ ({isRequestingBill === 'cash' ? 'NAKİT' : 'KART'})
+        </div>
+      )}
+      
       {/* Garson Uyarısı Etiketi */}
-      {isCallingWaiter && (
+      {isCallingWaiter && !isRequestingBill && (
         <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 whitespace-nowrap border-2 border-black z-10 animate-bounce">
           🔔 GARSON ÇAĞIRILDI
         </div>

@@ -86,6 +86,12 @@ export function TableDetailModal({
     else showToast('Garson çağrısı kapatıldı.');
   };
 
+  const handleResolveBill = async () => {
+    const { error } = await supabase.from('tables').update({ wants_bill: null }).eq('id', table.id);
+    if (error) showToast('Hesap isteği kapatılamadı: ' + error.message, 'error');
+    else showToast('Hesap isteği kapatıldı.');
+  };
+
   const handleMarkPaid = async () => {
     if (staffRole === 'chef') {
       showToast('Şefler hesap kapatamaz.', 'error');
@@ -94,8 +100,8 @@ export function TableDetailModal({
     for (const order of tableOrders) {
       await supabase.from('orders').update({ status: 'paid', updated_at: new Date().toISOString() }).eq('id', order.id);
     }
-    await supabase.from('tables').update({ status: 'empty' }).eq('id', table.id);
-    showToast('Hesap kapatıldı!');
+    await supabase.from('tables').update({ status: 'empty', needs_waiter: false, wants_bill: null }).eq('id', table.id);
+    showToast('Hesap kapatıldı ve masa boşaltıldı.');
     onClose();
   };
 
@@ -193,8 +199,24 @@ export function TableDetailModal({
             </button>
           </div>
 
+          {/* Hesap İsteği Banner */}
+          {table.wants_bill && (
+            <div className="mt-4 bg-amber-100 border-2 border-amber-500 p-3 flex items-center justify-between animate-pulse">
+              <div className="flex items-center gap-2 text-amber-700 font-bold">
+                <span className="text-xl">🧾</span>
+                <span>Bu masa {table.wants_bill === 'cash' ? 'NAKİT' : 'KART'} ile hesap istedi!</span>
+              </div>
+              <button 
+                onClick={handleResolveBill}
+                className="px-3 py-1 bg-white border-2 border-amber-500 text-amber-700 text-sm font-bold hover:bg-amber-50"
+              >
+                Kapat
+              </button>
+            </div>
+          )}
+
           {/* Garson Çağrısı Banner */}
-          {table.needs_waiter && (
+          {table.needs_waiter && !table.wants_bill && (
             <div className="mt-4 bg-red-100 border-2 border-red-500 p-3 flex items-center justify-between animate-pulse">
               <div className="flex items-center gap-2 text-red-700 font-bold">
                 <span className="text-xl">🔔</span>
@@ -202,9 +224,9 @@ export function TableDetailModal({
               </div>
               <button 
                 onClick={handleResolveWaiter}
-                className="bg-red-500 text-white px-3 py-1 text-sm font-bold border-2 border-red-700 hover:bg-red-600 active:scale-95 transition-all"
+                className="px-3 py-1 bg-white border-2 border-red-500 text-red-700 text-sm font-bold hover:bg-red-50"
               >
-                İlgilenildi (Kapat)
+                Kapat
               </button>
             </div>
           )}
