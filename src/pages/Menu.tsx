@@ -557,6 +557,26 @@ export default function Menu() {
   const t = T[lang];
   const isRTL = LANGUAGES[lang].rtl ?? false;
 
+  useEffect(() => {
+    if (!restaurant) return;
+    const bgValue = restaurant.background_image_url || '';
+    const isCustomPhoto = bgValue.startsWith('http') || bgValue.startsWith('data:');
+    
+    document.body.style.backgroundColor = restaurant.background_color || '#F4E4C1';
+    document.body.style.backgroundImage = bgValue ? (isCustomPhoto ? `url(${bgValue})` : bgValue) : 'none';
+    document.body.style.backgroundSize = isCustomPhoto ? 'cover' : 'auto';
+    document.body.style.backgroundRepeat = isCustomPhoto ? 'no-repeat' : 'repeat';
+    document.body.style.backgroundAttachment = 'fixed';
+
+    return () => {
+      document.body.style.backgroundColor = '';
+      document.body.style.backgroundImage = '';
+      document.body.style.backgroundSize = '';
+      document.body.style.backgroundRepeat = '';
+      document.body.style.backgroundAttachment = '';
+    };
+  }, [restaurant]);
+
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center font-pixel text-3xl">
       {T[lang].loading}
@@ -568,17 +588,9 @@ export default function Menu() {
     </div>
   );
 
-  const bgValue = restaurant.background_image_url || '';
-  const isCustomPhoto = bgValue.startsWith('http') || bgValue.startsWith('data:');
-
   const menuStyle = {
     fontFamily: (restaurant.font_family || '"VT323", monospace').includes('VT323') ? '"VT323", "Press Start 2P", monospace' : restaurant.font_family,
     '--theme-color': restaurant.primary_color || '#8B5A2B',
-    backgroundColor: restaurant.background_color || '#F4E4C1',
-    backgroundImage: bgValue ? (isCustomPhoto ? `url(${bgValue})` : bgValue) : 'none',
-    backgroundSize: isCustomPhoto ? 'cover' : 'auto',
-    backgroundRepeat: isCustomPhoto ? 'no-repeat' : 'repeat',
-    backgroundAttachment: 'fixed',
     direction: isRTL ? 'rtl' : 'ltr',
   } as React.CSSProperties;
 
