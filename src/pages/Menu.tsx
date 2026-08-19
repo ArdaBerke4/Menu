@@ -727,7 +727,7 @@ export default function Menu() {
                 onMouseLeave={handleMouseLeave}
                 onMouseUp={handleMouseUp}
                 onMouseMove={handleMouseMove}
-                className={`flex overflow-x-auto gap-3 pb-4 mb-2 sticky top-[80px] z-10 pt-2 cursor-grab active:cursor-grabbing ${isDragging ? '' : 'snap-x'}`} 
+                className={`flex overflow-x-auto gap-3 pb-4 mb-2 sticky top-[80px] z-10 pt-2 cursor-grab active:cursor-grabbing ${isDragging ? '' : 'snap-x'} ${restaurant.header_style !== 'left' ? 'md:justify-center' : ''}`} 
                 style={{ scrollbarWidth: 'none' }}
               >
                 {categories.filter(c => (categoryProductsMap[c.id] || []).length > 0).map(category => (
@@ -753,11 +753,13 @@ export default function Menu() {
 
               return (
                 <div key={category.id} className="space-y-4">
-                  <div
-                    className={`text-surface px-6 py-2 border-2 inline-block font-bold uppercase shadow-sm ${radiusClass} ${fs.cat}`}
-                    style={{ backgroundColor: themeColor, borderColor: themeColor, ...fs.cat }}
-                  >
-                    {translations[category.name] || category.name}
+                  <div className={restaurant.header_style !== 'left' ? "text-center" : "text-left"}>
+                    <div
+                      className={`text-surface px-6 py-2 border-2 inline-block font-bold uppercase shadow-sm ${radiusClass} ${fs.cat}`}
+                      style={{ backgroundColor: themeColor, borderColor: themeColor, ...fs.cat }}
+                    >
+                      {translations[category.name] || category.name}
+                    </div>
                   </div>
 
                   <div className={restaurant.layout_style === 'grid' ? "grid grid-cols-1 md:grid-cols-2 gap-4" : "space-y-4"}>
