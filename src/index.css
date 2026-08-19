@@ -41,8 +41,8 @@ html, body {
     --admin-danger: #E5484D;
     --admin-danger-hover: #CE2C31;
     --admin-danger-text: #FFFFFF;
-    --admin-primary-faint: #e8f4e1;
-    --admin-danger-faint: #fde8e8;
+    --admin-primary-faint: #262626;
+    --admin-danger-faint: #451a1a;
     --admin-sidebar: #0A0A0A;
     --admin-sidebar-hover: #171717;
     --admin-shadow: 0 1px 3px rgba(0,0,0,0.5); 

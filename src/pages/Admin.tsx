@@ -805,7 +805,7 @@ export default function Admin() {
                   {rest.logo_url ? <img src={rest.logo_url} loading="lazy" className="w-full h-full object-cover" /> : rest.name.charAt(0)}
                 </div>
                 <h2 className="text-3xl font-bold uppercase mb-2">{rest.name}</h2>
-                <p className="bg-brand-light px-3 py-1 border-2 border-admin-border text-sm font-bold">Yönetime Gir ➔</p>
+                <p className="bg-brand-light px-3 py-1 border-2 border-admin-border text-sm font-bold text-brand-dark">Yönetime Gir ➔</p>
               </div>
             ))}
             <div className="bg-admin-primary-faint border-4 border-dashed border-admin-primary p-6 flex flex-col justify-center">
