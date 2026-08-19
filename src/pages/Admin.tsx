@@ -896,19 +896,19 @@ export default function Admin() {
         <div className="absolute inset-0 w-12 flex items-center justify-center group-hover:opacity-0 transition-opacity duration-200">
           <span className="font-bold text-admin-text -rotate-90 whitespace-nowrap tracking-[0.3em] text-xl">MENÜ &gt;</span>
         </div>
-        <div className="w-64 p-6 h-full flex flex-col opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-75">
-          <div className="mb-8 border-b-4 border-admin-border pb-4">
+        <div className="w-64 p-6 h-full flex flex-col opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-75 overflow-y-auto">
+          <div className="mb-8 border-b-4 border-admin-border pb-4 shrink-0">
             <h2 className="text-2xl font-bold text-admin-text uppercase truncate">{selectedRestaurant?.name}</h2>
             <button onClick={() => setActiveTab('dashboard')} className="mt-2 text-sm text-brand underline hover:text-admin-text">← Tüm Mekanlarıma Dön</button>
           </div>
-          <nav className="flex flex-col gap-3 flex-grow">
+          <nav className="flex flex-col gap-3 shrink-0">
             <button onClick={() => setActiveTab('menu')} className={`text-left px-4 py-3 border-2 border-admin-border transition-all ${activeTab === 'menu' ? 'bg-admin-primary text-admin-primary-text shadow-admin-pixel' : 'bg-admin-surface text-admin-text hover:bg-admin-sidebar-hover'}`}>Envanter (Menü)</button>
             <button onClick={() => setActiveTab('campaigns')} className={`text-left px-4 py-3 border-2 border-admin-border transition-all ${activeTab === 'campaigns' ? 'bg-admin-primary text-admin-primary-text shadow-admin-pixel' : 'bg-admin-surface text-admin-text hover:bg-admin-sidebar-hover'}`}>Kampanya Düzenle 🏷️</button>
             <button onClick={() => setActiveTab('about')} className={`text-left px-4 py-3 border-2 border-admin-border transition-all ${activeTab === 'about' ? 'bg-admin-primary text-admin-primary-text shadow-admin-pixel' : 'bg-admin-surface text-admin-text hover:bg-admin-sidebar-hover'}`}>Restoran Hakkında</button>
             <button onClick={() => setActiveTab('settings')} className={`text-left px-4 py-3 border-2 border-admin-border transition-all ${activeTab === 'settings' ? 'bg-admin-primary text-admin-primary-text shadow-admin-pixel' : 'bg-admin-surface text-admin-text hover:bg-admin-sidebar-hover'}`}>Görünüm Ayarları</button>
             <button onClick={() => setActiveTab('staff')} className={`text-left px-4 py-3 border-2 border-admin-border transition-all ${activeTab === 'staff' ? 'bg-admin-primary text-admin-primary-text shadow-admin-pixel' : 'bg-admin-surface text-admin-text hover:bg-admin-sidebar-hover'}`}>Personeller 🧑‍🍳</button>
           </nav>
-          <div className="mt-auto pt-6 border-t-4 border-admin-border space-y-3">
+          <div className="mt-6 pt-6 border-t-4 border-admin-border space-y-3 shrink-0 pb-10">
             {renderThemePicker()}
             {selectedRestaurant && (
               <>
