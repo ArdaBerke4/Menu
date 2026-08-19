@@ -6,13 +6,36 @@ export default function Auth() {
   const [isRegister, setIsRegister] = useState(false); // Giriş mi kayıt mı kontrolü
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  const toggleMode = () => {
+    setIsRegister(!isRegister);
+    setEmail('');
+    setPassword('');
+    setConfirmPassword('');
+    setErrorMsg(null);
+  };
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (isRegister) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        setErrorMsg("Lütfen geçerli bir e-posta adresi girin.");
+        return;
+      }
+      
+      if (password !== confirmPassword) {
+        setErrorMsg("Şifreler eşleşmiyor, lütfen kontrol edin.");
+        return;
+      }
+    }
+
     setLoading(true);
     setErrorMsg(null);
 
@@ -68,6 +91,20 @@ export default function Auth() {
             />
           </div>
 
+          {isRegister && (
+            <div>
+              <label className="block font-bold mb-1">ŞİFRE (TEKRAR)</label>
+              <input
+                type="password"
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="******"
+                className="w-full px-4 py-2 border-2 border-brand-dark bg-white focus:outline-none"
+              />
+            </div>
+          )}
+
           <button
             type="submit"
             disabled={loading}
@@ -80,7 +117,8 @@ export default function Auth() {
         <p className="text-center text-lg mt-6 text-brand-dark font-bold">
           {isRegister ? 'Zaten hesabın var mı?' : 'Henüz mekanını kaydetmedin mi?'}
           <button
-            onClick={() => setIsRegister(!isRegister)}
+            onClick={toggleMode}
+            type="button"
             className="ml-2 text-brand underline hover:text-brand-dark focus:outline-none"
           >
             {isRegister ? 'Giriş Yap' : 'Kayıt Ol'}
