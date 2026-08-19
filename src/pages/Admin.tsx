@@ -35,6 +35,31 @@ function SortableCategoryItem({ category, onUp, onDown, isFirst, isLast, onDelet
 }
 
 export default function Admin() {
+  useEffect(() => {
+    const metaViewport = document.querySelector('meta[name="viewport"]');
+    if (metaViewport) {
+      metaViewport.setAttribute('content', 'width=1200, initial-scale=0.1, user-scalable=yes');
+    }
+    
+    // Admin temasına göre body arkaplanını eşitle (dışarı taşıldığında beyaz görünmemesi için)
+    const updateBodyBg = () => {
+      const bg = getComputedStyle(document.documentElement).getPropertyValue('--admin-bg').trim();
+      if (bg) document.body.style.backgroundColor = bg;
+    };
+    updateBodyBg();
+    
+    // Tema değiştiğinde (localStorage) veya observer ile body rengini güncellemek gerekirse diye
+    const observer = new MutationObserver(updateBodyBg);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-admin-theme'] });
+
+    return () => {
+      if (metaViewport) {
+        metaViewport.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no');
+      }
+      observer.disconnect();
+      document.body.style.backgroundColor = '';
+    };
+  }, []);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'menu' | 'about' | 'settings' | 'campaigns' | 'staff'>('dashboard');
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
@@ -912,7 +937,7 @@ export default function Admin() {
       </aside>
 
       {/* ANA İÇERİK */}
-      <main className="flex-1 p-4 md:p-8 ml-12 overflow-y-auto h-screen bg-admin-bg">
+      <main className="flex-1 p-8 ml-12 overflow-y-auto h-screen bg-admin-bg">
 
         {/* ===== KAMPANYA DÜZENLE ===== */}
         {activeTab === 'campaigns' && selectedRestaurant && (
