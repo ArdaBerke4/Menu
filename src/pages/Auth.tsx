@@ -23,8 +23,9 @@ export default function Auth() {
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const emailRegex = /^[^s@]+@[^s@]+.[^s@]+$/;
-    if (!emailRegex.test(email)) {
+    const cleanEmail = email.trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(cleanEmail)) {
       setMessage({text: "Lütfen geçerli bir e-posta adresi girin.", type: 'error'});
       return;
     }
@@ -38,15 +39,15 @@ export default function Auth() {
     setMessage(null);
 
     if (view === 'register') {
-      const { error } = await supabase.auth.signUp({ email, password });
+      const { error } = await supabase.auth.signUp({ email: cleanEmail, password });
       if (error) setMessage({text: "Kayıt hatası: " + error.message, type: 'error'});
       else setMessage({text: "Kayıt başarılı! Şimdi giriş yapabilirsiniz.", type: 'success'});
     } else if (view === 'login') {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password });
       if (error) setMessage({text: "Giriş hatası: " + (error.message === 'Failed to fetch' ? 'Sunucuya ulaşılamıyor.' : error.message), type: 'error'});
       else navigate('/admin');
     } else if (view === 'forgot-password') {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
         redirectTo: window.location.origin + '/reset-password'
       });
       if (error) setMessage({text: "Hata: " + error.message, type: 'error'});
