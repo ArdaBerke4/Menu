@@ -719,7 +719,7 @@ export default function Menu() {
       {/* ÜRÜN LİSTESİ */}
       <main className={`w-full ${restaurant.layout_style === 'grid' ? 'max-w-4xl' : 'max-w-md'} space-y-10`}>
         
-          <div className={restaurant.layout_style === 'grid' ? "grid grid-cols-1 md:grid-cols-2 gap-8" : "space-y-10"}>
+          <div className="space-y-10">
             {restaurant.nav_style === 'tabs' && (
               <div 
                 ref={tabsRef}
@@ -760,7 +760,7 @@ export default function Menu() {
                     {translations[category.name] || category.name}
                   </div>
 
-                  <div className={restaurant.layout_style === 'grid' ? "grid grid-cols-1 gap-4" : "space-y-4"}>
+                  <div className={restaurant.layout_style === 'grid' ? "grid grid-cols-1 md:grid-cols-2 gap-4" : "space-y-4"}>
                     {categoryProducts.map(product => {
                       const priceInfo = getDiscountedPrice(product);
                       return (
