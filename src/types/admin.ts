@@ -21,6 +21,7 @@ export interface Restaurant {
   qr_corner_style?: string;
   qr_use_logo?: boolean;
   slug?: string;
+  email?: string;
 }
 
 export interface Category {

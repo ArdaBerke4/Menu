@@ -163,7 +163,7 @@ export default function Admin() {
     if (!session) return;
     
     const slug = slugify(newRestaurantName);
-    const { data, error } = await supabase.from('restaurants').insert([{ name: newRestaurantName, user_id: session.user.id, slug }]).select().single();
+    const { data, error } = await supabase.from('restaurants').insert([{ name: newRestaurantName, user_id: session.user.id, slug, email: session.user.email }]).select().single();
     
     if (error) {
       if (error.code === '23505') {
