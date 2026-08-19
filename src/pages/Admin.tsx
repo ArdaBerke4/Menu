@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { slugify } from '../utils/slugify';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
@@ -22,12 +22,12 @@ function SortableCategoryItem({ category, onUp, onDown, isFirst, isLast, onDelet
   return (
     <div ref={setNodeRef} style={style} className="flex items-center justify-between bg-admin-surface border-2 border-admin-border px-4 py-2 mb-2 z-10 relative">
       <div className="flex items-center gap-3">
-        <button type="button" {...attributes} {...listeners} className="cursor-grab hover:text-brand text-2xl" title="SÃ¼rÃ¼kle">â£¿</button>
+        <button type="button" {...attributes} {...listeners} className="cursor-grab hover:text-brand text-2xl" title="Sürükle">⣿</button>
         <span className="font-bold truncate">{category.name}</span>
       </div>
       <div className="flex gap-2 shrink-0">
-        <button type="button" onClick={() => onUp(category)} disabled={isFirst} className="w-8 h-8 flex items-center justify-center bg-brand-light border-2 border-admin-border font-bold hover:bg-admin-surface disabled:opacity-30">â–²</button>
-        <button type="button" onClick={() => onDown(category)} disabled={isLast} className="w-8 h-8 flex items-center justify-center bg-brand-light border-2 border-admin-border font-bold hover:bg-admin-surface disabled:opacity-30">â–¼</button>
+        <button type="button" onClick={() => onUp(category)} disabled={isFirst} className="w-8 h-8 flex items-center justify-center bg-brand-light border-2 border-admin-border font-bold hover:bg-admin-surface disabled:opacity-30">▲</button>
+        <button type="button" onClick={() => onDown(category)} disabled={isLast} className="w-8 h-8 flex items-center justify-center bg-brand-light border-2 border-admin-border font-bold hover:bg-admin-surface disabled:opacity-30">▼</button>
         <button type="button" onClick={() => onDelete(category.id)} className="w-8 h-8 flex items-center justify-center bg-admin-danger text-surface border-2 border-admin-border font-bold hover:opacity-80" title="Sil">X</button>
       </div>
     </div>
@@ -60,7 +60,7 @@ export default function Admin() {
   };
   const navigate = useNavigate();
 
-  // TOPLU ZAM/Ä°NDÄ°RÄ°M PANELÄ° STATE'LERÄ°
+  // TOPLU ZAM/İNDİRİM PANELİ STATE'LERİ
   const [bulkMode, setBulkMode] = useState<null | 'increase' | 'decrease'>(null);
   const [bulkValueType, setBulkValueType] = useState<'percent' | 'fixed'>('percent');
   const [bulkValue, setBulkValue] = useState('');
@@ -87,7 +87,7 @@ export default function Admin() {
   const [restaurantDescription, setRestaurantDescription] = useState('');
   const [restaurantAddress, setRestaurantAddress] = useState('');
 
-  // MENÃœ YÃ–NETÄ°MÄ°
+  // MENÜ YÖNETİMİ
   const [categoryName, setCategoryName] = useState('');
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -99,16 +99,16 @@ export default function Admin() {
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [productOptions, setProductOptions] = useState<ProductOption[]>([]);
 
-  // ARAMA, FÄ°LTRELEME VE TOPLU Ä°ÅLEM
+  // ARAMA, FİLTRELEME VE TOPLU İŞLEM
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategoryId, setFilterCategoryId] = useState('');
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [sortByPrice, setSortByPrice] = useState<null | 'asc' | 'desc'>(null);
 
-  // KAMPANYA YÃ–NETÄ°MÄ°
+  // KAMPANYA YÖNETİMİ
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
 
-  // DND SensÃ¶rleri
+  // DND Sensörleri
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
@@ -151,7 +151,7 @@ export default function Admin() {
       if (prodData) setProducts(prodData);
     } else { setCategories([]); setProducts([]); }
 
-    // KampanyalarÄ± Ã§ek
+    // Kampanyaları çek
     const { data: campData } = await supabase.from('campaigns').select('*').eq('restaurant_id', restaurant.id).order('created_at', { ascending: false });
     if (campData) setCampaigns(campData);
     else setCampaigns([]);
@@ -167,9 +167,9 @@ export default function Admin() {
     
     if (error) {
       if (error.code === '23505') {
-        showToast("Bu isimde bir restoran zaten var. LÃ¼tfen (KadÄ±kÃ¶y, AvcÄ±lar gibi) ÅŸube adÄ± ekleyerek benzersiz bir isim belirleyin.", "error");
+        showToast("Bu isimde bir restoran zaten var. Lütfen (Kadıköy, Avcılar gibi) şube adı ekleyerek benzersiz bir isim belirleyin.", "error");
       } else {
-        showToast("Restoran oluÅŸturulamadÄ±: " + error.message, "error");
+        showToast("Restoran oluşturulamadı: " + error.message, "error");
       }
     } else if (data) {
       setMyRestaurants([...myRestaurants, data]);
@@ -183,16 +183,16 @@ export default function Admin() {
     e.stopPropagation();
     setConfirmDialog({
       isOpen: true,
-      message: `"${restaurantName}" ÅŸubesini ve iÃ§indeki tÃ¼m menÃ¼ verilerini silmek istediÄŸinize emin misiniz? Bu iÅŸlem geri alÄ±namaz.`,
+      message: `"${restaurantName}" şubesini ve içindeki tüm menü verilerini silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`,
       onConfirm: async () => {
         setConfirmDialog(prev => ({ ...prev, isOpen: false }));
         setLoading(true);
         const { error } = await supabase.from('restaurants').delete().eq('id', restaurantId);
         if (!error) {
           setMyRestaurants(myRestaurants.filter(r => r.id !== restaurantId));
-          showToast(`Åube baÅŸarÄ±yla silindi.`);
+          showToast(`Şube başarıyla silindi.`);
         } else {
-          showToast(`Silme iÅŸlemi baÅŸarÄ±sÄ±z: ${error.message}`, 'error');
+          showToast(`Silme işlemi başarısız: ${error.message}`, 'error');
         }
         setLoading(false);
       }
@@ -229,13 +229,13 @@ export default function Admin() {
       card_bg_color: cardBgColor,
     }).eq('id', selectedRestaurant.id).select().single();
 
-    if (error) showToast("GÃ¼ncelleme baÅŸarÄ±sÄ±z: " + error.message, 'error');
+    if (error) showToast("Güncelleme başarısız: " + error.message, 'error');
     else if (data) {
       setSelectedRestaurant(data);
       setBgImageUrl(finalBgImageUrl);
       setBgUploadFile(null);
       setMyRestaurants(myRestaurants.map(r => r.id === data.id ? data : r));
-      showToast("GÃ¶rÃ¼nÃ¼m ayarlarÄ± baÅŸarÄ±yla kaydedildi!");
+      showToast("Görünüm ayarları başarıyla kaydedildi!");
     }
     setLoading(false);
   };
@@ -254,7 +254,7 @@ export default function Admin() {
       setNavStyle(last.navStyle as any);
       setCardBgColor(last.cardBgColor);
       setSettingsHistory(prev => prev.slice(0, -1));
-      showToast("Bir adÄ±m geri alÄ±ndÄ±.");
+      showToast("Bir adım geri alındı.");
     } else if (selectedRestaurant) {
       setThemeColor(selectedRestaurant.primary_color || '#8B5A2B');
       setThemeFont(selectedRestaurant.font_family || '"VT323", monospace');
@@ -268,7 +268,7 @@ export default function Admin() {
       setCardBgColor(selectedRestaurant.card_bg_color || '#FFFFFF');
       setLogoFile(null);
       setBgUploadFile(null);
-      showToast("TÃ¼m deÄŸiÅŸiklikler sÄ±fÄ±rlandÄ±.");
+      showToast("Tüm değişiklikler sıfırlandı.");
     }
   };
 
@@ -278,7 +278,7 @@ export default function Admin() {
       description: restaurantDescription,
       address: restaurantAddress,
     }).eq('id', selectedRestaurant.id).select().single();
-    if (error) showToast("GÃ¼ncelleme baÅŸarÄ±sÄ±z: " + error.message, 'error');
+    if (error) showToast("Güncelleme başarısız: " + error.message, 'error');
     else if (data) {
       setSelectedRestaurant(data);
       setMyRestaurants(myRestaurants.map(r => r.id === data.id ? data : r));
@@ -345,7 +345,7 @@ export default function Admin() {
       }
 
       if (jsonData.length === 0) {
-        showToast("Excel dosyasÄ± boÅŸ.", "error");
+        showToast("Excel dosyası boş.", "error");
         return;
       }
 
@@ -364,7 +364,7 @@ export default function Admin() {
       let newCategoriesCount = 0;
       let currentMaxSortOrder = categories.length > 0 ? Math.max(...categories.map(c => c.sort_order ?? 0)) : -1;
 
-      // 1. Kategorileri Ä°ÅŸle
+      // 1. Kategorileri İşle
       for (const cat of excelCategories) {
         let existingCat = null;
         if (cat.id) {
@@ -392,7 +392,7 @@ export default function Admin() {
         }
       }
 
-      // 2. ÃœrÃ¼nleri Ä°ÅŸle
+      // 2. Ürünleri İşle
       const productsToInsert = [];
       const productsToUpdate: any[] = [];
       let updatedProductsCount = 0;
@@ -401,10 +401,10 @@ export default function Admin() {
 
       for (const row of jsonData as any[]) {
         const catName = String(row['Kategori'] || '').trim();
-        const prodName = String(row['ÃœrÃ¼n AdÄ±'] || '').trim();
-        const prodId = row['ÃœrÃ¼n ID'] ? String(row['ÃœrÃ¼n ID']).trim() : null;
+        const prodName = String(row['Ürün Adı'] || '').trim();
+        const prodId = row['Ürün ID'] ? String(row['Ürün ID']).trim() : null;
         let priceStr = row['Fiyat'];
-        const desc = String(row['AÃ§Ä±klama'] || '').trim();
+        const desc = String(row['Açıklama'] || '').trim();
 
         if (!catName || !prodName || priceStr === undefined) continue;
 
@@ -447,7 +447,7 @@ export default function Admin() {
         });
       }
 
-      // 3. VeritabanÄ±na Yaz
+      // 3. Veritabanına Yaz
       if (productsToUpdate.length > 0) {
         for (const p of productsToUpdate) {
           await supabase.from('products').update({
@@ -466,13 +466,13 @@ export default function Admin() {
           .select();
 
         if (prodError) {
-          showToast("Yeni Ã¼rÃ¼nler eklenirken hata oluÅŸtu.", "error");
+          showToast("Yeni ürünler eklenirken hata oluştu.", "error");
         }
       }
 
-      showToast(`${newCategoriesCount} yeni kategori, ${productsToInsert.length} yeni Ã¼rÃ¼n eklendi. ${updatedProductsCount} Ã¼rÃ¼n gÃ¼ncellendi!`, "success");
+      showToast(`${newCategoriesCount} yeni kategori, ${productsToInsert.length} yeni ürün eklendi. ${updatedProductsCount} ürün güncellendi!`, "success");
       
-      // TÃ¼m Ã¼rÃ¼nleri ve kategorileri yeniden Ã§ek
+      // Tüm ürünleri ve kategorileri yeniden çek
       const { data: updatedCategories } = await supabase.from('categories').select('*').eq('restaurant_id', selectedRestaurant.id).order('sort_order', { ascending: true });
       const { data: updatedProducts } = await supabase.from('products').select('*').eq('restaurant_id', selectedRestaurant.id).order('sort_order', { ascending: true });
       
@@ -481,7 +481,7 @@ export default function Admin() {
 
     } catch (err) {
       console.error(err);
-      showToast("Excel dosyasÄ± okunurken hata oluÅŸtu.", "error");
+      showToast("Excel dosyası okunurken hata oluştu.", "error");
     } finally {
       setLoading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -530,11 +530,11 @@ export default function Admin() {
       }).eq('id', editingProductId).select().single();
 
       if (error) {
-        showToast("ÃœrÃ¼n gÃ¼ncellenirken hata oluÅŸtu.", 'error');
+        showToast("Ürün güncellenirken hata oluştu.", 'error');
       } else if (data) {
         setProducts(products.map(p => p.id === data.id ? data : p));
         resetProductForm();
-        showToast("ÃœrÃ¼n baÅŸarÄ±yla gÃ¼ncellendi!");
+        showToast("Ürün başarıyla güncellendi!");
       }
     } else {
       const nextOrder = products.filter(p => p.category_id === selectedCategoryId).length;
@@ -549,11 +549,11 @@ export default function Admin() {
       }]).select().single();
       
       if (error) {
-        showToast("ÃœrÃ¼n eklenirken hata oluÅŸtu: " + error.message, 'error');
+        showToast("Ürün eklenirken hata oluştu: " + error.message, 'error');
       } else if (data) {
         setProducts([...products, data]);
         resetProductForm();
-        showToast("ÃœrÃ¼n baÅŸarÄ±yla eklendi!");
+        showToast("Ürün başarıyla eklendi!");
       }
     }
     setLoading(false);
@@ -599,25 +599,25 @@ export default function Admin() {
     const { error } = await supabase.from('products').update({ price: newPrice }).eq('id', productId);
     if (!error) {
       setProducts(products.map(p => p.id === productId ? { ...p, price: newPrice } : p));
-      showToast("Fiyat baÅŸarÄ±yla gÃ¼ncellendi!");
+      showToast("Fiyat başarıyla güncellendi!");
     } else {
-      showToast("Fiyat gÃ¼ncellenemedi: " + error.message, 'error');
+      showToast("Fiyat güncellenemedi: " + error.message, 'error');
     }
   };
 
   const handleDeleteProduct = async (productId: string) => {
     setConfirmDialog({
       isOpen: true,
-      message: "Bu Ã¼rÃ¼nÃ¼ silmek istediÄŸine emin misin? Bu iÅŸlem geri alÄ±namaz.",
+      message: "Bu ürünü silmek istediğine emin misin? Bu işlem geri alınamaz.",
       onConfirm: async () => {
         setConfirmDialog(prev => ({ ...prev, isOpen: false }));
         const { error } = await supabase.from('products').delete().eq('id', productId);
         if (!error) { 
           setProducts(products.filter(p => p.id !== productId)); 
           if (editingProductId === productId) resetProductForm(); 
-          showToast("ÃœrÃ¼n silindi.");
+          showToast("Ürün silindi.");
         } else {
-          showToast("ÃœrÃ¼n silinemedi.", 'error');
+          showToast("Ürün silinemedi.", 'error');
         }
       }
     });
@@ -626,11 +626,11 @@ export default function Admin() {
   const handleDeleteCategory = async (categoryId: string) => {
     setConfirmDialog({
       isOpen: true,
-      message: "Bu kategoriyi silmek istediÄŸinize emin misiniz? DÄ°KKAT: Ä°Ã§indeki tÃ¼m Ã¼rÃ¼nler de silinecektir!",
+      message: "Bu kategoriyi silmek istediğinize emin misiniz? DİKKAT: İçindeki tüm ürünler de silinecektir!",
       onConfirm: async () => {
         setConfirmDialog(prev => ({ ...prev, isOpen: false }));
         
-        // Ã–nce bu kategoriye ait Ã¼rÃ¼nleri sil (Foreign key hatasÄ±nÄ± Ã¶nlemek iÃ§in)
+        // Önce bu kategoriye ait ürünleri sil (Foreign key hatasını önlemek için)
         await supabase.from('products').delete().eq('category_id', categoryId);
 
         // Sonra kategoriyi sil
@@ -640,7 +640,7 @@ export default function Admin() {
           setCategories(categories.filter(c => c.id !== categoryId)); 
           setProducts(products.filter(p => p.category_id !== categoryId));
           if (selectedCategoryId === categoryId) setSelectedCategoryId('');
-          showToast("Kategori baÅŸarÄ±yla silindi.");
+          showToast("Kategori başarıyla silindi.");
         } else {
           showToast("Kategori silinemedi: " + error.message, 'error');
         }
@@ -671,7 +671,7 @@ export default function Admin() {
       return (a.sort_order ?? 0) - (b.sort_order ?? 0);
     }), [products, searchTerm, filterCategoryId, sortByPrice, categories]);
 
-  // Kategoriye gÃ¶re Ã¼rÃ¼nleri grupla (performans iÃ§in)
+  // Kategoriye göre ürünleri grupla (performans için)
   const productsByCategoryId = useMemo(() => {
     const grouped: Record<string, Product[]> = {};
     for (const p of products) {
@@ -696,7 +696,7 @@ export default function Admin() {
   const handleApplyBulkAction = async () => {
     if (!bulkMode || selectedProductIds.length === 0) return;
     const value = parseFloat(bulkValue.replace(',', '.'));
-    if (isNaN(value) || value <= 0) { showToast("LÃ¼tfen geÃ§erli bir sayÄ± gir.", 'error'); return; }
+    if (isNaN(value) || value <= 0) { showToast("Lütfen geçerli bir sayı gir.", 'error'); return; }
     setLoading(true);
     try {
       const updatedProductsToUpsert = selectedProductIds.map(id => {
@@ -728,10 +728,10 @@ export default function Admin() {
 
       setSelectedProductIds([]);
       setBulkMode(null); setBulkValue('');
-      showToast("Toplu iÅŸlem baÅŸarÄ±yla uygulandÄ±!");
+      showToast("Toplu işlem başarıyla uygulandı!");
     } catch (error) { 
       console.error(error);
-      showToast("Toplu iÅŸlem sÄ±rasÄ±nda bir hata oluÅŸtu.", 'error'); 
+      showToast("Toplu işlem sırasında bir hata oluştu.", 'error'); 
     } finally {
       setLoading(false);
     }
@@ -741,7 +741,7 @@ export default function Admin() {
     if (selectedProductIds.length === 0) return;
     setConfirmDialog({
       isOpen: true,
-      message: `SeÃ§ili ${selectedProductIds.length} Ã¼rÃ¼nÃ¼ silmek istediÄŸinize emin misiniz? Bu iÅŸlem geri alÄ±namaz.`,
+      message: `Seçili ${selectedProductIds.length} ürünü silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`,
       onConfirm: async () => {
         setConfirmDialog(prev => ({ ...prev, isOpen: false }));
         setLoading(true);
@@ -750,13 +750,13 @@ export default function Admin() {
           if (!error) { 
             setProducts(products.filter(p => !selectedProductIds.includes(p.id))); 
             setSelectedProductIds([]); 
-            showToast("SeÃ§ili Ã¼rÃ¼nler baÅŸarÄ±yla silindi."); 
+            showToast("Seçili ürünler başarıyla silindi."); 
           } else {
-            showToast("Silme iÅŸlemi baÅŸarÄ±sÄ±z: " + error.message, 'error');
+            showToast("Silme işlemi başarısız: " + error.message, 'error');
           }
         } catch (error) {
           console.error(error);
-          showToast("Silme iÅŸlemi sÄ±rasÄ±nda hata oluÅŸtu.", 'error');
+          showToast("Silme işlemi sırasında hata oluştu.", 'error');
         } finally {
           setLoading(false);
         }
@@ -770,9 +770,9 @@ export default function Admin() {
       onChange={e => setAdminTheme(e.target.value)}
       className="bg-admin-surface text-admin-text border-2 border-admin-border px-3 py-2 font-bold text-sm outline-none cursor-pointer hover:bg-admin-sidebar shadow-admin-pixel-sm transition-colors uppercase"
     >
-      <option value="classic">Bej (VarsayÄ±lan)</option>
-      <option value="modern-light">GÃ¼ndÃ¼z (AydÄ±nlÄ±k)</option>
-      <option value="modern-dark">Gece (KaranlÄ±k)</option>
+      <option value="classic">Bej (Varsayılan)</option>
+      <option value="modern-light">Gündüz (Aydınlık)</option>
+      <option value="modern-dark">Gece (Karanlık)</option>
       <option value="nord">Kurumsal (Zarif)</option>
       <option value="dracula">Derin Gece (Kontrast)</option>
     </select>
@@ -788,7 +788,7 @@ export default function Admin() {
             <h1 className="text-5xl font-bold text-admin-text uppercase">Kontrol Paneli</h1>
             <div className="flex items-center gap-4">
               {renderThemePicker()}
-              <button onClick={handleLogout} className="bg-admin-danger text-admin-danger-text px-6 py-2 border-2 border-admin-border shadow-admin-pixel font-bold hover:bg-admin-danger-hover">Ã‡Ä±kÄ±ÅŸ Yap</button>
+              <button onClick={handleLogout} className="bg-admin-danger text-admin-danger-text px-6 py-2 border-2 border-admin-border shadow-admin-pixel font-bold hover:bg-admin-danger-hover">Çıkış Yap</button>
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -797,22 +797,22 @@ export default function Admin() {
                 <button 
                   onClick={(e) => handleDeleteRestaurant(e, rest.id, rest.name)}
                   className="absolute top-2 right-2 bg-admin-danger text-admin-danger-text border-2 border-admin-border w-8 h-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-admin-danger-hover shadow-admin-pixel-sm font-bold"
-                  title="Åubeyi Sil"
+                  title="Şubeyi Sil"
                 >
-                  âœ•
+                  ✕
                 </button>
                 <div className="w-24 h-24 border-4 mb-4 flex items-center justify-center text-4xl font-bold uppercase overflow-hidden" style={{ backgroundColor: rest.primary_color || '#8B5A2B', borderColor: '#1A1A1A', color: '#FFF' }}>
                   {rest.logo_url ? <img src={rest.logo_url} loading="lazy" className="w-full h-full object-cover" /> : rest.name.charAt(0)}
                 </div>
                 <h2 className="text-3xl font-bold uppercase mb-2">{rest.name}</h2>
-                <p className="bg-brand-light px-3 py-1 border-2 border-admin-border text-sm font-bold">YÃ¶netime Gir â”</p>
+                <p className="bg-brand-light px-3 py-1 border-2 border-admin-border text-sm font-bold">Yönetime Gir ➔</p>
               </div>
             ))}
             <div className="bg-admin-primary-faint border-4 border-dashed border-admin-primary p-6 flex flex-col justify-center">
-              <h2 className="text-2xl font-bold uppercase mb-4 text-center">Yeni Åube Ekle</h2>
+              <h2 className="text-2xl font-bold uppercase mb-4 text-center">Yeni Şube Ekle</h2>
               <form onSubmit={handleCreateRestaurant} className="space-y-4">
-                <input type="text" required value={newRestaurantName} onChange={(e) => setNewRestaurantName(e.target.value)} placeholder="Åube AdÄ±" className="w-full px-4 py-3 border-2 border-admin-border focus:outline-none" />
-                <button type="submit" className="w-full bg-admin-primary text-admin-primary-text border-2 border-admin-border px-4 py-3 font-bold hover:bg-admin-primary-hover shadow-admin-pixel">+ OLUÅTUR</button>
+                <input type="text" required value={newRestaurantName} onChange={(e) => setNewRestaurantName(e.target.value)} placeholder="Şube Adı" className="w-full px-4 py-3 border-2 border-admin-border focus:outline-none" />
+                <button type="submit" className="w-full bg-admin-primary text-admin-primary-text border-2 border-admin-border px-4 py-3 font-bold hover:bg-admin-primary-hover shadow-admin-pixel">+ OLUŞTUR</button>
               </form>
             </div>
           </div>
@@ -837,7 +837,7 @@ export default function Admin() {
                 onClick={() => setConfirmDialog({ ...confirmDialog, isOpen: false })} 
                 className="flex-1 px-6 py-4 bg-admin-surface text-admin-text border-4 border-admin-border font-bold hover:bg-admin-sidebar-hover transition-colors shadow-admin-pixel-sm text-lg"
               >
-                VazgeÃ§
+                Vazgeç
               </button>
               <button 
                 onClick={confirmDialog.onConfirm} 
@@ -854,7 +854,7 @@ export default function Admin() {
       {toast && (
         <div className="fixed bottom-6 right-6 z-50 animate-bounce-in">
           <div className={`px-6 py-4 border-4 shadow-admin-pixel font-bold text-lg text-admin-bg flex items-center gap-3 ${toast.type === 'success' ? 'bg-admin-primary border-admin-primary' : 'bg-admin-danger border-admin-danger'}`}>
-            <span>{toast.type === 'success' ? 'âœ“' : 'âœ•'}</span>
+            <span>{toast.type === 'success' ? '✓' : '✕'}</span>
             <span>{toast.message}</span>
           </div>
         </div>
@@ -869,19 +869,19 @@ export default function Admin() {
       {/* HOVER SIDEBAR */}
       <aside className="group fixed top-0 left-0 h-screen w-12 hover:w-64 bg-admin-bg border-r-4 border-admin-border transition-all duration-300 ease-in-out z-50 overflow-hidden shadow-[4px_0_0_rgba(26,26,26,0.1)]">
         <div className="absolute inset-0 w-12 flex items-center justify-center group-hover:opacity-0 transition-opacity duration-200">
-          <span className="font-bold text-admin-text -rotate-90 whitespace-nowrap tracking-[0.3em] text-xl">MENÃœ &gt;</span>
+          <span className="font-bold text-admin-text -rotate-90 whitespace-nowrap tracking-[0.3em] text-xl">MENÜ &gt;</span>
         </div>
         <div className="w-64 p-6 h-full flex flex-col opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-75">
           <div className="mb-8 border-b-4 border-admin-border pb-4">
             <h2 className="text-2xl font-bold text-admin-text uppercase truncate">{selectedRestaurant?.name}</h2>
-            <button onClick={() => setActiveTab('dashboard')} className="mt-2 text-sm text-brand underline hover:text-admin-text">â† TÃ¼m MekanlarÄ±ma DÃ¶n</button>
+            <button onClick={() => setActiveTab('dashboard')} className="mt-2 text-sm text-brand underline hover:text-admin-text">← Tüm Mekanlarıma Dön</button>
           </div>
           <nav className="flex flex-col gap-3 flex-grow">
-            <button onClick={() => setActiveTab('menu')} className={`text-left px-4 py-3 border-2 border-admin-border transition-all ${activeTab === 'menu' ? 'bg-admin-primary text-admin-primary-text shadow-admin-pixel' : 'bg-admin-surface text-admin-text hover:bg-admin-sidebar-hover'}`}>Envanter (MenÃ¼)</button>
-            <button onClick={() => setActiveTab('campaigns')} className={`text-left px-4 py-3 border-2 border-admin-border transition-all ${activeTab === 'campaigns' ? 'bg-admin-primary text-admin-primary-text shadow-admin-pixel' : 'bg-admin-surface text-admin-text hover:bg-admin-sidebar-hover'}`}>Kampanya DÃ¼zenle ğŸ·ï¸</button>
-            <button onClick={() => setActiveTab('about')} className={`text-left px-4 py-3 border-2 border-admin-border transition-all ${activeTab === 'about' ? 'bg-admin-primary text-admin-primary-text shadow-admin-pixel' : 'bg-admin-surface text-admin-text hover:bg-admin-sidebar-hover'}`}>Restoran HakkÄ±nda</button>
-            <button onClick={() => setActiveTab('settings')} className={`text-left px-4 py-3 border-2 border-admin-border transition-all ${activeTab === 'settings' ? 'bg-admin-primary text-admin-primary-text shadow-admin-pixel' : 'bg-admin-surface text-admin-text hover:bg-admin-sidebar-hover'}`}>GÃ¶rÃ¼nÃ¼m AyarlarÄ±</button>
-            <button onClick={() => setActiveTab('staff')} className={`text-left px-4 py-3 border-2 border-admin-border transition-all ${activeTab === 'staff' ? 'bg-admin-primary text-admin-primary-text shadow-admin-pixel' : 'bg-admin-surface text-admin-text hover:bg-admin-sidebar-hover'}`}>Personeller ğŸ§‘â€ğŸ³</button>
+            <button onClick={() => setActiveTab('menu')} className={`text-left px-4 py-3 border-2 border-admin-border transition-all ${activeTab === 'menu' ? 'bg-admin-primary text-admin-primary-text shadow-admin-pixel' : 'bg-admin-surface text-admin-text hover:bg-admin-sidebar-hover'}`}>Envanter (Menü)</button>
+            <button onClick={() => setActiveTab('campaigns')} className={`text-left px-4 py-3 border-2 border-admin-border transition-all ${activeTab === 'campaigns' ? 'bg-admin-primary text-admin-primary-text shadow-admin-pixel' : 'bg-admin-surface text-admin-text hover:bg-admin-sidebar-hover'}`}>Kampanya Düzenle 🏷️</button>
+            <button onClick={() => setActiveTab('about')} className={`text-left px-4 py-3 border-2 border-admin-border transition-all ${activeTab === 'about' ? 'bg-admin-primary text-admin-primary-text shadow-admin-pixel' : 'bg-admin-surface text-admin-text hover:bg-admin-sidebar-hover'}`}>Restoran Hakkında</button>
+            <button onClick={() => setActiveTab('settings')} className={`text-left px-4 py-3 border-2 border-admin-border transition-all ${activeTab === 'settings' ? 'bg-admin-primary text-admin-primary-text shadow-admin-pixel' : 'bg-admin-surface text-admin-text hover:bg-admin-sidebar-hover'}`}>Görünüm Ayarları</button>
+            <button onClick={() => setActiveTab('staff')} className={`text-left px-4 py-3 border-2 border-admin-border transition-all ${activeTab === 'staff' ? 'bg-admin-primary text-admin-primary-text shadow-admin-pixel' : 'bg-admin-surface text-admin-text hover:bg-admin-sidebar-hover'}`}>Personeller 🧑‍🍳</button>
           </nav>
           <div className="mt-auto pt-6 border-t-4 border-admin-border space-y-3">
             {renderThemePicker()}
@@ -891,19 +891,19 @@ export default function Admin() {
                   onClick={() => window.open(`/pos/${selectedRestaurant.id}`, '_blank')}
                   className="w-full px-2 py-3 bg-admin-primary text-admin-primary-text border-2 border-admin-border font-bold uppercase text-sm hover:opacity-90 active:translate-y-1 shadow-admin-pixel-sm"
                 >
-                  ğŸª Masa & SipariÅŸ YÃ¶netimi
+                  🏪 Masa & Sipariş Yönetimi
                 </button>
                 <button
                   onClick={() => navigate(`/qr/${selectedRestaurant.id}`)}
                   className="w-full px-2 py-2 bg-admin-surface text-admin-text border-2 border-admin-border font-bold uppercase text-sm hover:bg-admin-surface active:translate-y-1 shadow-admin-pixel-sm"
                 >
-                  QR Ã–zelleÅŸtir âœ¦
+                  QR Özelleştir ✦
                 </button>
                 <button
                   onClick={() => window.open(menuLink, '_blank')}
                   className="w-full px-2 py-2 bg-admin-primary text-admin-primary-text border-2 border-admin-border font-bold uppercase text-sm hover:bg-admin-primary-hover active:translate-y-1 shadow-admin-pixel-sm"
                 >
-                  MenÃ¼yÃ¼ GÃ¶r â†—
+                  Menüyü Gör ↗
                 </button>
               </>
             )}
@@ -911,10 +911,10 @@ export default function Admin() {
         </div>
       </aside>
 
-      {/* ANA Ä°Ã‡ERÄ°K */}
+      {/* ANA İÇERİK */}
       <main className="flex-1 p-8 ml-12 overflow-y-auto h-screen bg-admin-bg">
 
-        {/* ===== KAMPANYA DÃœZENLE ===== */}
+        {/* ===== KAMPANYA DÜZENLE ===== */}
         {activeTab === 'campaigns' && selectedRestaurant && (
           <CampaignsTab 
             campaigns={campaigns}
@@ -930,50 +930,50 @@ export default function Admin() {
         {activeTab === 'about' && selectedRestaurant && (
           <div className="max-w-2xl mx-auto">
             <header className="mb-8">
-              <h1 className="text-4xl font-bold uppercase mb-2">Restoran HakkÄ±nda</h1>
-              <p className="text-lg text-admin-text/60 font-bold">Bu bilgiler mÃ¼ÅŸteri menÃ¼sÃ¼nde logo altÄ±nda gÃ¶rÃ¼nÃ¼r.</p>
+              <h1 className="text-4xl font-bold uppercase mb-2">Restoran Hakkında</h1>
+              <p className="text-lg text-admin-text/60 font-bold">Bu bilgiler müşteri menüsünde logo altında görünür.</p>
             </header>
             <form onSubmit={handleUpdateAbout} className="bg-admin-bg border-4 border-admin-border shadow-admin-pixel p-8 space-y-6">
               <div>
-                <label className="block font-bold mb-2 text-2xl">ğŸ“‹ KÄ±sa AÃ§Ä±klama</label>
-                <textarea rows={5} value={restaurantDescription} onChange={(e) => setRestaurantDescription(e.target.value)} placeholder="Ã–rn: 2015'ten beri Ä°stanbul'un kalbinde, evsahibi sÄ±caklÄ±ÄŸÄ±yla hizmet veriyoruz..." className="w-full px-4 py-3 border-2 border-admin-border bg-admin-surface focus:outline-none resize-none text-base leading-relaxed" />
+                <label className="block font-bold mb-2 text-2xl">📋 Kısa Açıklama</label>
+                <textarea rows={5} value={restaurantDescription} onChange={(e) => setRestaurantDescription(e.target.value)} placeholder="Örn: 2015'ten beri İstanbul'un kalbinde, evsahibi sıcaklığıyla hizmet veriyoruz..." className="w-full px-4 py-3 border-2 border-admin-border bg-admin-surface focus:outline-none resize-none text-base leading-relaxed" />
                 <p className="text-sm text-admin-text/60 mt-1 font-bold">{restaurantDescription.length} karakter</p>
               </div>
               <div>
-                <label className="block font-bold mb-2 text-2xl">ğŸ“ Adres / Konum</label>
-                <input type="text" value={restaurantAddress} onChange={(e) => setRestaurantAddress(e.target.value)} placeholder="Ã–rn: AtatÃ¼rk Cad. No:12, KadÄ±kÃ¶y / Ä°stanbul" className="w-full px-4 py-3 border-2 border-admin-border bg-admin-surface focus:outline-none text-base" />
-                <p className="text-sm text-admin-text/60 mt-1 font-bold">MÃ¼ÅŸteri menÃ¼sÃ¼nde tÄ±klanabilir Google Haritalar linki olarak gÃ¶sterilecek.</p>
+                <label className="block font-bold mb-2 text-2xl">📍 Adres / Konum</label>
+                <input type="text" value={restaurantAddress} onChange={(e) => setRestaurantAddress(e.target.value)} placeholder="Örn: Atatürk Cad. No:12, Kadıköy / İstanbul" className="w-full px-4 py-3 border-2 border-admin-border bg-admin-surface focus:outline-none text-base" />
+                <p className="text-sm text-admin-text/60 mt-1 font-bold">Müşteri menüsünde tıklanabilir Google Haritalar linki olarak gösterilecek.</p>
                 {restaurantAddress && (
                   <div className="mt-3 flex items-center gap-3 bg-admin-surface border-2 border-admin-primary px-4 py-3">
-                    <span className="text-2xl">ğŸ“</span>
+                    <span className="text-2xl">📍</span>
                     <div className="flex-1">
                       <p className="font-bold text-admin-text text-base truncate">{restaurantAddress}</p>
-                      <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(restaurantAddress)}`} target="_blank" rel="noopener noreferrer" className="text-sm text-[#5b7a57] underline font-bold">Google Haritalar'da Ã–nizle â†—</a>
+                      <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(restaurantAddress)}`} target="_blank" rel="noopener noreferrer" className="text-sm text-[#5b7a57] underline font-bold">Google Haritalar'da Önizle ↗</a>
                     </div>
                   </div>
                 )}
               </div>
               {(restaurantDescription || restaurantAddress) && (
                 <div className="border-t-2 border-admin-border pt-6">
-                  <p className="font-bold text-admin-text mb-3 uppercase text-lg">MenÃ¼de GÃ¶rÃ¼nÃ¼m Ã–nizlemesi:</p>
+                  <p className="font-bold text-admin-text mb-3 uppercase text-lg">Menüde Görünüm Önizlemesi:</p>
                   <div className="bg-admin-surface/80 border-2 border-admin-border p-4 space-y-3 text-center">
                     {restaurantDescription && <p className="text-base leading-relaxed italic opacity-90 text-admin-text">{restaurantDescription}</p>}
                     {restaurantAddress && (
                       <div className="inline-flex items-center gap-2 px-3 py-2 border-2 border-admin-border font-bold text-base text-admin-text bg-brand-light">
-                        <span>ğŸ“</span><span>{restaurantAddress}</span><span className="text-sm opacity-70">â†—</span>
+                        <span>📍</span><span>{restaurantAddress}</span><span className="text-sm opacity-70">↗</span>
                       </div>
                     )}
                   </div>
                 </div>
               )}
               <button type="submit" disabled={loading} className="w-full bg-admin-primary text-admin-primary-text border-2 border-admin-border px-6 py-4 shadow-admin-pixel font-bold text-2xl hover:bg-admin-primary-hover">
-                {loading ? 'KAYDEDÄ°LÄ°YOR...' : 'BÄ°LGÄ°LERÄ° KAYDET'}
+                {loading ? 'KAYDEDİLİYOR...' : 'BİLGİLERİ KAYDET'}
               </button>
             </form>
           </div>
         )}
 
-        {/* ===== GÃ–RÃœNÃœM AYARLARI ===== */}
+        {/* ===== GÖRÜNÜM AYARLARI ===== */}
         {activeTab === 'settings' && selectedRestaurant && (
           <SettingsTab
             themeColor={themeColor} setThemeColor={setThemeColor}
@@ -1003,7 +1003,7 @@ export default function Admin() {
             <StaffTab restaurant={selectedRestaurant} />
           )}
 
-        {/* ===== MENÃœ/ENVANTER ===== */}
+        {/* ===== MENÜ/ENVANTER ===== */}
         {activeTab === 'menu' && selectedRestaurant && (
           <MenuTab
             categoryName={categoryName} setCategoryName={setCategoryName}
@@ -1068,7 +1068,7 @@ export default function Admin() {
                 onClick={() => setConfirmDialog({ ...confirmDialog, isOpen: false })} 
                 className="flex-1 px-6 py-4 bg-admin-surface text-admin-text border-4 border-admin-border font-bold hover:bg-admin-sidebar-hover transition-colors shadow-admin-pixel-sm text-lg"
               >
-                VazgeÃ§
+                Vazgeç
               </button>
               <button 
                 onClick={confirmDialog.onConfirm} 
@@ -1085,7 +1085,7 @@ export default function Admin() {
       {toast && (
         <div className="fixed bottom-6 right-6 z-50 animate-bounce-in">
           <div className={`px-6 py-4 border-4 shadow-admin-pixel font-bold text-lg text-admin-bg flex items-center gap-3 ${toast.type === 'success' ? 'bg-admin-primary border-admin-primary' : 'bg-admin-danger border-admin-danger'}`}>
-            <span>{toast.type === 'success' ? 'âœ“' : 'âœ•'}</span>
+            <span>{toast.type === 'success' ? '✓' : '✕'}</span>
             <span>{toast.message}</span>
           </div>
         </div>
