@@ -549,7 +549,7 @@ export default function Admin() {
       }]).select().single();
       
       if (error) {
-        showToast("Ürün eklenirken hata oluştu.", 'error');
+        showToast("Ürün eklenirken hata oluştu: " + error.message, 'error');
       } else if (data) {
         setProducts([...products, data]);
         resetProductForm();
