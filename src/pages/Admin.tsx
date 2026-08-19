@@ -290,8 +290,16 @@ export default function Admin() {
   const handleCreateCategory = async (e: React.FormEvent) => {
     e.preventDefault(); setLoading(true);
     const nextOrder = categories.length > 0 ? Math.max(...categories.map(c => c.sort_order ?? 0)) + 1 : 0;
-    const { data } = await supabase.from('categories').insert([{ name: categoryName, restaurant_id: selectedRestaurant?.id, sort_order: nextOrder }]).select();
-    if (data) { setCategoryName(''); setCategories([...categories, data[0]]); if (!selectedCategoryId) setSelectedCategoryId(data[0].id); }
+    const { data, error } = await supabase.from('categories').insert([{ name: categoryName, restaurant_id: selectedRestaurant?.id, sort_order: nextOrder }]).select();
+    
+    if (error) {
+      showToast("Kategori eklenemedi: " + error.message, "error");
+    } else if (data) {
+      setCategoryName(''); 
+      setCategories([...categories, data[0]]); 
+      if (!selectedCategoryId) setSelectedCategoryId(data[0].id);
+      showToast("Kategori eklendi!", "success");
+    }
     setLoading(false);
   };
 
