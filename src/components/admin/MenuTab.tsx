@@ -83,8 +83,8 @@ export function MenuTab(props: any) {
   };
 
   return (
-    <div className="max-w-[1400px] flex gap-10">
-      <div className="w-[450px] shrink-0 space-y-8">
+    <div className="max-w-[1400px] flex flex-col xl:flex-row gap-10">
+      <div className="w-full xl:w-[450px] shrink-0 space-y-8">
         <div className="bg-admin-bg border-4 border-admin-border shadow-admin-pixel p-6">
           <h2 className="text-2xl font-bold mb-4 uppercase text-admin-text border-b-2 border-admin-border pb-2">Yeni Kategori Ekle</h2>
           <form onSubmit={handleCreateCategory} className="flex gap-4">
@@ -273,12 +273,12 @@ export function MenuTab(props: any) {
 
       <div className="flex-1 flex flex-col space-y-6">
         <div className="bg-admin-bg border-4 border-admin-border shadow-admin-pixel p-4 space-y-4">
-          <div className="flex gap-4">
+          <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1 flex border-2 border-admin-border bg-admin-surface">
               <span className="px-4 py-3 border-r-2 border-admin-border bg-brand-light font-bold">ARA:</span>
               <input type="text" placeholder="Ürün adı veya açıklama..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="flex-1 px-4 py-2 focus:outline-none bg-transparent" />
             </div>
-            <select value={filterCategoryId} onChange={(e) => setFilterCategoryId(e.target.value)} className="w-[250px] px-4 py-3 border-2 border-admin-border bg-admin-surface focus:outline-none cursor-pointer">
+            <select value={filterCategoryId} onChange={(e) => setFilterCategoryId(e.target.value)} className="w-full md:w-[250px] px-4 py-3 border-2 border-admin-border bg-admin-surface focus:outline-none cursor-pointer">
               <option value="">Tüm Kategoriler</option>
               {sortedCategories.map((cat: any) => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
             </select>
@@ -302,7 +302,7 @@ export function MenuTab(props: any) {
             <div className="bg-admin-primary-faint border-2 border-admin-primary p-3 space-y-3">
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <span className="font-bold text-[#5b7a57] px-2">{selectedProductIds.length} Ürün Seçildi</span>
-                <div className="flex gap-3">
+                <div className="flex flex-wrap gap-3">
                   <button type="button" onClick={() => { setBulkMode(bulkMode === 'increase' ? null : 'increase'); setBulkValue(''); }} className={`font-bold border-2 border-admin-border px-4 py-1 shadow-admin-pixel-sm hover:scale-105 transition-transform ${bulkMode === 'increase' ? 'bg-brand text-surface' : 'bg-admin-primary text-admin-primary-text'}`}>+ Toplu Zam</button>
                   <button type="button" onClick={() => { setBulkMode(bulkMode === 'decrease' ? null : 'decrease'); setBulkValue(''); }} className={`font-bold border-2 border-admin-border px-4 py-1 shadow-admin-pixel-sm hover:scale-105 transition-transform ${bulkMode === 'decrease' ? 'bg-brand text-surface' : 'bg-brand-light text-admin-text'}`}>- Toplu İndirim</button>
                   <button type="button" onClick={handleBulkDelete} className="bg-admin-danger text-surface font-bold border-2 border-admin-border px-4 py-1 shadow-admin-pixel-sm hover:scale-105 transition-transform">Toplu Sil</button>

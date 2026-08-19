@@ -912,7 +912,7 @@ export default function Admin() {
       </aside>
 
       {/* ANA İÇERİK */}
-      <main className="flex-1 p-8 ml-12 overflow-y-auto h-screen bg-admin-bg">
+      <main className="flex-1 p-4 md:p-8 ml-12 overflow-y-auto h-screen bg-admin-bg">
 
         {/* ===== KAMPANYA DÜZENLE ===== */}
         {activeTab === 'campaigns' && selectedRestaurant && (
