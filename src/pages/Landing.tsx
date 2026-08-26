@@ -1,6 +1,204 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 
+/* ---- Mini preview components for each feature card ---- */
+function PreviewQR() {
+  return (
+    <div className="bg-[#F4E4C1] p-4 text-[#4A3728] text-xs rounded">
+      <div className="text-center font-bold text-sm mb-2 border-b border-[#4A3728] pb-1">☕ KADIKÖY KAFE</div>
+      <div className="flex gap-2 mb-2 justify-center">
+        <span className="bg-[#8fb38a] text-white px-2 py-0.5 text-[10px] font-bold">Sıcak</span>
+        <span className="bg-white border border-[#4A3728] px-2 py-0.5 text-[10px]">Soğuk</span>
+        <span className="bg-white border border-[#4A3728] px-2 py-0.5 text-[10px]">Tatlı</span>
+      </div>
+      <div className="space-y-1">
+        <div className="flex justify-between bg-white p-1.5 border border-[#4A3728]"><span>Espresso</span><span className="font-bold">95 ₺</span></div>
+        <div className="flex justify-between bg-white p-1.5 border border-[#4A3728]"><span>Latte</span><span className="font-bold">145 ₺</span></div>
+        <div className="flex justify-between bg-white p-1.5 border border-[#4A3728]"><span>Cappuccino</span><span className="font-bold">140 ₺</span></div>
+      </div>
+    </div>
+  );
+}
+
+function PreviewThemes() {
+  return (
+    <div className="space-y-2 text-xs">
+      <div className="flex gap-1.5">
+        <div className="flex-1 bg-[#F4E4C1] border border-[#4A3728] p-2 text-[#4A3728] text-center rounded">
+          <div className="w-full h-1.5 bg-[#8fb38a] rounded mb-1"></div>Klasik
+        </div>
+        <div className="flex-1 bg-[#0A0A0A] border border-[#333] p-2 text-white text-center rounded">
+          <div className="w-full h-1.5 bg-[#EDEDED] rounded mb-1"></div>Gece
+        </div>
+      </div>
+      <div className="flex gap-1.5">
+        <div className="flex-1 bg-[#2E3440] border border-[#4C566A] p-2 text-[#ECEFF4] text-center rounded">
+          <div className="w-full h-1.5 bg-[#88C0D0] rounded mb-1"></div>Nord
+        </div>
+        <div className="flex-1 bg-[#282A36] border border-[#6272A4] p-2 text-[#F8F8F2] text-center rounded">
+          <div className="w-full h-1.5 bg-[#BD93F9] rounded mb-1"></div>Dracula
+        </div>
+      </div>
+      <div className="flex gap-1.5">
+        <div className="flex-1 bg-[#F9FAFB] border border-[#E5E7EB] p-2 text-[#111827] text-center rounded">
+          <div className="w-full h-1.5 bg-[#111827] rounded mb-1"></div>Modern
+        </div>
+        <div className="flex-1 bg-[#F4E4C1] border-2 border-dashed border-[#C8A97E] p-2 text-[#4A3728] text-center rounded">
+          <div className="w-full h-1.5 bg-[#C8A97E] rounded mb-1"></div>Bej
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PreviewOrders() {
+  return (
+    <div className="text-xs space-y-1.5">
+      <div className="grid grid-cols-3 gap-1">
+        <div className="bg-green-900/50 border border-green-700 p-2 rounded text-center">
+          <div className="font-bold text-green-400">Masa 1</div>
+          <div className="text-green-300 text-[10px]">✓ Ödendi</div>
+        </div>
+        <div className="bg-yellow-900/50 border border-yellow-700 p-2 rounded text-center">
+          <div className="font-bold text-yellow-400">Masa 2</div>
+          <div className="text-yellow-300 text-[10px]">⏳ Bekliyor</div>
+        </div>
+        <div className="bg-red-900/50 border border-red-700 p-2 rounded text-center">
+          <div className="font-bold text-red-400">Masa 3</div>
+          <div className="text-red-300 text-[10px]">🔔 Garson</div>
+        </div>
+      </div>
+      <div className="bg-[#1A1A1A] border border-[#333] p-2 rounded">
+        <div className="text-gray-400 mb-1">Masa 2 — Sipariş:</div>
+        <div className="text-white">2x Latte, 1x Cheesecake</div>
+        <div className="text-[#C8A97E] font-bold mt-1">Toplam: 430 ₺</div>
+      </div>
+    </div>
+  );
+}
+
+function PreviewCampaigns() {
+  return (
+    <div className="text-xs space-y-1.5">
+      <div className="bg-gradient-to-r from-[#8fb38a]/20 to-transparent border border-[#8fb38a] p-2 rounded flex justify-between items-center">
+        <div>
+          <div className="font-bold text-[#8fb38a]">🏷️ Öğle İndirimi</div>
+          <div className="text-gray-400">Tüm menü</div>
+        </div>
+        <div className="text-xl font-bold text-[#8fb38a]">%20</div>
+      </div>
+      <div className="bg-gradient-to-r from-[#C8A97E]/20 to-transparent border border-[#C8A97E] p-2 rounded flex justify-between items-center">
+        <div>
+          <div className="font-bold text-[#C8A97E]">☕ Kahve Kampanyası</div>
+          <div className="text-gray-400">Sıcak İçecekler</div>
+        </div>
+        <div className="text-xl font-bold text-[#C8A97E]">%15</div>
+      </div>
+      <div className="bg-gradient-to-r from-[#88C0D0]/20 to-transparent border border-[#88C0D0] p-2 rounded flex justify-between items-center">
+        <div>
+          <div className="font-bold text-[#88C0D0]">🎂 Doğum Günü</div>
+          <div className="text-gray-400">Tatlılar</div>
+        </div>
+        <div className="text-xl font-bold text-[#88C0D0]">%30</div>
+      </div>
+    </div>
+  );
+}
+
+function PreviewStaff() {
+  return (
+    <div className="text-xs space-y-1.5">
+      <div className="bg-[#1A1A1A] border border-[#333] p-2 rounded flex items-center gap-2">
+        <div className="w-8 h-8 bg-[#C8A97E] rounded-full flex items-center justify-center text-black font-bold">AY</div>
+        <div className="flex-1">
+          <div className="font-bold text-white">Ahmet Yılmaz</div>
+          <div className="text-gray-400">Garson</div>
+        </div>
+        <span className="bg-green-900/50 text-green-400 px-2 py-0.5 rounded text-[10px]">Aktif</span>
+      </div>
+      <div className="bg-[#1A1A1A] border border-[#333] p-2 rounded flex items-center gap-2">
+        <div className="w-8 h-8 bg-[#8fb38a] rounded-full flex items-center justify-center text-black font-bold">EK</div>
+        <div className="flex-1">
+          <div className="font-bold text-white">Elif Kara</div>
+          <div className="text-gray-400">Şef</div>
+        </div>
+        <span className="bg-green-900/50 text-green-400 px-2 py-0.5 rounded text-[10px]">Aktif</span>
+      </div>
+      <div className="bg-[#1A1A1A] border border-[#333] p-2 rounded flex items-center gap-2">
+        <div className="w-8 h-8 bg-[#88C0D0] rounded-full flex items-center justify-center text-black font-bold">MD</div>
+        <div className="flex-1">
+          <div className="font-bold text-white">Mehmet Demir</div>
+          <div className="text-gray-400">Garson</div>
+        </div>
+        <span className="bg-gray-700 text-gray-400 px-2 py-0.5 rounded text-[10px]">Pasif</span>
+      </div>
+    </div>
+  );
+}
+
+function PreviewStats() {
+  return (
+    <div className="text-xs space-y-2">
+      <div className="grid grid-cols-2 gap-1.5">
+        <div className="bg-[#1A1A1A] border border-[#333] p-2 rounded">
+          <div className="text-gray-500 text-[10px]">Bugün</div>
+          <div className="text-lg font-bold text-[#C8A97E]">₺12.450</div>
+        </div>
+        <div className="bg-[#1A1A1A] border border-[#333] p-2 rounded">
+          <div className="text-gray-500 text-[10px]">Sipariş</div>
+          <div className="text-lg font-bold text-[#8fb38a]">127</div>
+        </div>
+      </div>
+      <div className="bg-[#1A1A1A] border border-[#333] p-2 rounded">
+        <div className="text-gray-500 text-[10px] mb-1">En Çok Satan</div>
+        <div className="space-y-1">
+          <div className="flex items-center gap-1">
+            <div className="flex-1 bg-[#222] rounded-full h-2"><div className="bg-[#C8A97E] h-2 rounded-full" style={{width:'90%'}}></div></div>
+            <span className="text-gray-300 w-14 text-right">Latte</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="flex-1 bg-[#222] rounded-full h-2"><div className="bg-[#8fb38a] h-2 rounded-full" style={{width:'70%'}}></div></div>
+            <span className="text-gray-300 w-14 text-right">Espresso</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="flex-1 bg-[#222] rounded-full h-2"><div className="bg-[#88C0D0] h-2 rounded-full" style={{width:'55%'}}></div></div>
+            <span className="text-gray-300 w-14 text-right">Mocha</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---- Feature Card with hover preview ---- */
+function FeatureCard({ icon, title, description, preview }: { icon: string; title: string; description: string; preview: React.ReactNode }) {
+  return (
+    <div className="group relative p-8 bg-[#111111] border border-[#222222] hover:border-[#C8A97E]/50 transition-all duration-500 hover:-translate-y-2">
+      <div className="text-5xl mb-6">{icon}</div>
+      <h3 className="text-2xl font-bold mb-4 text-[#E8D5B5]">{title}</h3>
+      <p className="text-gray-400 leading-relaxed">{description}</p>
+      
+      {/* Hover Preview */}
+      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-4 w-72 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform group-hover:-translate-y-0 translate-y-4 z-50 pointer-events-none">
+        <div className="bg-[#0F0F0F] border border-[#C8A97E]/30 rounded-lg overflow-hidden shadow-2xl shadow-[#C8A97E]/10">
+          {/* Fake title bar */}
+          <div className="flex items-center gap-1.5 px-3 py-2 bg-[#1A1A1A] border-b border-[#333]">
+            <div className="w-2 h-2 rounded-full bg-[#FF5F57]"></div>
+            <div className="w-2 h-2 rounded-full bg-[#FEBC2E]"></div>
+            <div className="w-2 h-2 rounded-full bg-[#28C840]"></div>
+            <span className="ml-2 text-gray-500 text-[10px] font-pixel">{title}</span>
+          </div>
+          <div className="p-3">
+            {preview}
+          </div>
+        </div>
+        {/* Arrow */}
+        <div className="absolute left-1/2 -translate-x-1/2 -bottom-2 w-4 h-4 bg-[#0F0F0F] border-r border-b border-[#C8A97E]/30 rotate-45"></div>
+      </div>
+    </div>
+  );
+}
+
 export default function Landing() {
   const navigate = useNavigate();
   const [scrollY, setScrollY] = useState(0);
@@ -72,47 +270,42 @@ export default function Landing() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {/* Feature 1 */}
-            <div className="group p-8 bg-[#111111] border border-[#222222] hover:border-[#C8A97E]/50 transition-all duration-500 hover:-translate-y-2">
-              <div className="text-5xl mb-6">📱</div>
-              <h3 className="text-2xl font-bold mb-4 text-[#E8D5B5]">QR Kod ile Menü</h3>
-              <p className="text-gray-400 leading-relaxed">Müşterileriniz masadaki QR kodu okutarak menünüze anında ulaşsın. Bekleme yok, fiziksel menü yok.</p>
-            </div>
-
-            {/* Feature 2 */}
-            <div className="group p-8 bg-[#111111] border border-[#222222] hover:border-[#C8A97E]/50 transition-all duration-500 hover:-translate-y-2">
-              <div className="text-5xl mb-6">🎨</div>
-              <h3 className="text-2xl font-bold mb-4 text-[#E8D5B5]">Özelleştirilebilir Temalar</h3>
-              <p className="text-gray-400 leading-relaxed">6 farklı tema ile yönetim panelinizi kişiselleştirin. Klasik, Modern, Dracula ve daha fazlası.</p>
-            </div>
-
-            {/* Feature 3 */}
-            <div className="group p-8 bg-[#111111] border border-[#222222] hover:border-[#C8A97E]/50 transition-all duration-500 hover:-translate-y-2">
-              <div className="text-5xl mb-6">📊</div>
-              <h3 className="text-2xl font-bold mb-4 text-[#E8D5B5]">Sipariş Yönetimi</h3>
-              <p className="text-gray-400 leading-relaxed">Masa bazlı sipariş takibi, garson çağırma ve hesap isteme. Tüm siparişler tek panelde.</p>
-            </div>
-
-            {/* Feature 4 */}
-            <div className="group p-8 bg-[#111111] border border-[#222222] hover:border-[#C8A97E]/50 transition-all duration-500 hover:-translate-y-2">
-              <div className="text-5xl mb-6">🏷️</div>
-              <h3 className="text-2xl font-bold mb-4 text-[#E8D5B5]">Kampanya Sistemi</h3>
-              <p className="text-gray-400 leading-relaxed">İndirim kampanyaları oluşturun, kategorilere özel kampanyalar tanımlayın. Müşterilerinizi şaşırtın.</p>
-            </div>
-
-            {/* Feature 5 */}
-            <div className="group p-8 bg-[#111111] border border-[#222222] hover:border-[#C8A97E]/50 transition-all duration-500 hover:-translate-y-2">
-              <div className="text-5xl mb-6">👨‍🍳</div>
-              <h3 className="text-2xl font-bold mb-4 text-[#E8D5B5]">Personel Yönetimi</h3>
-              <p className="text-gray-400 leading-relaxed">Garson ve şef hesapları oluşturun, rol bazlı yetkilendirme ile ekibinizi yönetin.</p>
-            </div>
-
-            {/* Feature 6 */}
-            <div className="group p-8 bg-[#111111] border border-[#222222] hover:border-[#C8A97E]/50 transition-all duration-500 hover:-translate-y-2">
-              <div className="text-5xl mb-6">📈</div>
-              <h3 className="text-2xl font-bold mb-4 text-[#E8D5B5]">İstatistik & Raporlama</h3>
-              <p className="text-gray-400 leading-relaxed">Satış istatistiklerini görüntüleyin, Excel'e aktarın. Veriye dayalı kararlar alın.</p>
-            </div>
+            <FeatureCard
+              icon="📱"
+              title="QR Kod ile Menü"
+              description="Müşterileriniz masadaki QR kodu okutarak menünüze anında ulaşsın. Bekleme yok, fiziksel menü yok."
+              preview={<PreviewQR />}
+            />
+            <FeatureCard
+              icon="🎨"
+              title="Özelleştirilebilir Temalar"
+              description="6 farklı tema ile yönetim panelinizi kişiselleştirin. Klasik, Modern, Dracula ve daha fazlası."
+              preview={<PreviewThemes />}
+            />
+            <FeatureCard
+              icon="📊"
+              title="Sipariş Yönetimi"
+              description="Masa bazlı sipariş takibi, garson çağırma ve hesap isteme. Tüm siparişler tek panelde."
+              preview={<PreviewOrders />}
+            />
+            <FeatureCard
+              icon="🏷️"
+              title="Kampanya Sistemi"
+              description="İndirim kampanyaları oluşturun, kategorilere özel kampanyalar tanımlayın. Müşterilerinizi şaşırtın."
+              preview={<PreviewCampaigns />}
+            />
+            <FeatureCard
+              icon="👨‍🍳"
+              title="Personel Yönetimi"
+              description="Garson ve şef hesapları oluşturun, rol bazlı yetkilendirme ile ekibinizi yönetin."
+              preview={<PreviewStaff />}
+            />
+            <FeatureCard
+              icon="📈"
+              title="İstatistik & Raporlama"
+              description="Satış istatistiklerini görüntüleyin, Excel'e aktarın. Veriye dayalı kararlar alın."
+              preview={<PreviewStats />}
+            />
           </div>
         </div>
       </section>
