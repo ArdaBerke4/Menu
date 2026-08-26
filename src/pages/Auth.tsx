@@ -57,8 +57,8 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen bg-surface flex items-center justify-center font-pixel text-ink text-xl p-4">
-      <div className="w-full max-w-md bg-[#F4E4C1] border-4 border-brand-dark shadow-pixel p-6">
+    <div className="min-h-screen bg-surface flex items-center justify-center font-pixel text-ink text-xl p-4 animate-fade-in">
+      <div className="w-full max-w-md bg-[#F4E4C1] border-4 border-brand-dark shadow-pixel p-6 animate-page-enter">
         <h2 className="text-3xl font-bold text-center text-brand-dark uppercase border-b-4 border-brand-dark pb-3 mb-6">
           {view === 'register' ? 'Yeni Hesap Oluştur' : view === 'forgot-password' ? 'Şifremi Unuttum' : 'Mekan Sahibi Girişi'}
         </h2>
