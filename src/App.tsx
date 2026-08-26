@@ -9,6 +9,8 @@ const QRCustomizer = lazy(() => import('./pages/QRCustomizer'));
 const ManagementDashboard = lazy(() => import('./pages/ManagementDashboard'));
 const StaffLogin = lazy(() => import('./pages/StaffLogin'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const Policies = lazy(() => import('./pages/Policies'));
+import CookieBanner from './components/CookieBanner';
 
 class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean}> {
   constructor(props: {children: React.ReactNode}) {
@@ -50,6 +52,7 @@ function App() {
             <Route path="/auth" element={<Auth />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/policies" element={<Policies />} />
             <Route path="/staff-login/:restaurantId" element={<StaffLogin />} />
             
             {/* QR Kod Özelleştirici */}
@@ -64,6 +67,7 @@ function App() {
             {/* Müşteriler İçin (Dinamik Link) */}
             <Route path="/menu/:slug" element={<Menu />} />
           </Routes>
+          <CookieBanner />
         </Suspense>
       </BrowserRouter>
     </ErrorBoundary>

@@ -422,7 +422,10 @@ export default function Landing() {
             <span className="text-2xl">🍽️</span>
             <span className="text-xl font-bold text-[#C8A97E]">QR Menü</span>
           </div>
-          <p className="text-gray-500 text-sm">© 2026 QR Menü. Tüm hakları saklıdır.</p>
+          <div className="flex items-center gap-6">
+            <button onClick={() => navigate('/policies')} className="text-gray-500 text-sm hover:text-[#C8A97E] transition-colors">Gizlilik & Çerez Politikası</button>
+            <p className="text-gray-500 text-sm">© 2026 QR Menü. Tüm hakları saklıdır.</p>
+          </div>
         </div>
       </footer>
     </div>
