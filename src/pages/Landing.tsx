@@ -179,7 +179,7 @@ function FeatureCard({ icon, title, description, preview }: { icon: string; titl
       <p className="text-gray-400 leading-relaxed">{description}</p>
       
       {/* Hover Preview */}
-      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-4 w-72 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform group-hover:-translate-y-0 translate-y-4 z-50 pointer-events-none">
+      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-4 w-[420px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform group-hover:-translate-y-0 translate-y-4 z-50 pointer-events-none">
         <div className="bg-[#0F0F0F] border border-[#C8A97E]/30 rounded-lg overflow-hidden shadow-2xl shadow-[#C8A97E]/10">
           {/* Fake title bar */}
           <div className="flex items-center gap-1.5 px-3 py-2 bg-[#1A1A1A] border-b border-[#333]">
@@ -188,7 +188,7 @@ function FeatureCard({ icon, title, description, preview }: { icon: string; titl
             <div className="w-2 h-2 rounded-full bg-[#28C840]"></div>
             <span className="ml-2 text-gray-500 text-[10px] font-pixel">{title}</span>
           </div>
-          <div className="p-3">
+          <div className="p-5">
             {preview}
           </div>
         </div>
