@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { supabase } from '../supabase'; // wait, no
+import { useState, useEffect } from 'react';
+import { supabase } from '../supabase';
 import { useNavigate } from 'react-router-dom';
 
 export default function Auth() {
@@ -7,10 +7,26 @@ export default function Auth() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  
+  // Captcha States
+  const [captchaNum1, setCaptchaNum1] = useState(0);
+  const [captchaNum2, setCaptchaNum2] = useState(0);
+  const [userCaptcha, setUserCaptcha] = useState('');
+  
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const [message, setMessage] = useState<{text: string, type: 'success' | 'error'} | null>(null);
+
+  const generateCaptcha = () => {
+    setCaptchaNum1(Math.floor(Math.random() * 10) + 1);
+    setCaptchaNum2(Math.floor(Math.random() * 10) + 1);
+    setUserCaptcha('');
+  };
+
+  useEffect(() => {
+    generateCaptcha();
+  }, [view]);
 
   const toggleView = (newView: 'login' | 'register' | 'forgot-password') => {
     setView(newView);
@@ -35,12 +51,22 @@ export default function Auth() {
       return;
     }
 
+    // Captcha Check
+    if ((view === 'register' || view === 'forgot-password') && parseInt(userCaptcha) !== (captchaNum1 + captchaNum2)) {
+      setMessage({text: "Güvenlik sorusunu yanlış cevapladınız. Lütfen tekrar deneyin.", type: 'error'});
+      generateCaptcha();
+      return;
+    }
+
     setLoading(true);
     setMessage(null);
 
     if (view === 'register') {
       const { error } = await supabase.auth.signUp({ email: cleanEmail, password });
-      if (error) setMessage({text: "Kayıt hatası: " + error.message, type: 'error'});
+      if (error) {
+        setMessage({text: "Kayıt hatası: " + error.message, type: 'error'});
+        generateCaptcha();
+      }
       else setMessage({text: "Kayıt başarılı! Şimdi giriş yapabilirsiniz.", type: 'success'});
     } else if (view === 'login') {
       const { error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password });
@@ -50,7 +76,10 @@ export default function Auth() {
       const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
         redirectTo: window.location.origin + '/reset-password'
       });
-      if (error) setMessage({text: "Hata: " + error.message, type: 'error'});
+      if (error) {
+         setMessage({text: "Hata: " + error.message, type: 'error'});
+         generateCaptcha();
+      }
       else setMessage({text: "Şifre sıfırlama bağlantısı e-posta adresinize gönderildi! Lütfen gelen kutunuzu kontrol edin.", type: 'success'});
     }
     setLoading(false);
@@ -107,6 +136,29 @@ export default function Auth() {
                 placeholder="******"
                 className="w-full px-4 py-2 border-2 border-brand-dark bg-white focus:outline-none"
               />
+            </div>
+          )}
+
+          {/* CAPTCHA SECTION */}
+          {(view === 'register' || view === 'forgot-password') && (
+            <div className="bg-[#e2d3af] p-3 border-2 border-brand-dark">
+              <label className="block font-bold mb-1 text-brand-dark flex items-center justify-between">
+                <span>GÜVENLİK KONTROLÜ</span>
+                <span className="text-sm cursor-pointer hover:text-black" onClick={generateCaptcha}>🔄 YENİLE</span>
+              </label>
+              <div className="flex items-center gap-3">
+                <div className="bg-white border-2 border-brand-dark px-3 py-2 font-bold text-xl min-w-[80px] text-center shrink-0">
+                  {captchaNum1} + {captchaNum2} =
+                </div>
+                <input
+                  type="number"
+                  required
+                  value={userCaptcha}
+                  onChange={(e) => setUserCaptcha(e.target.value)}
+                  placeholder="?"
+                  className="w-full px-4 py-2 border-2 border-brand-dark bg-white focus:outline-none font-bold text-center"
+                />
+              </div>
             </div>
           )}
 
