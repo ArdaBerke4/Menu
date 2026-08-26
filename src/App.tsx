@@ -1,6 +1,7 @@
 import React, { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
+const Landing = lazy(() => import('./pages/Landing'));
 const Menu = lazy(() => import('./pages/Menu'));
 const Admin = lazy(() => import('./pages/Admin'));
 const Auth = lazy(() => import('./pages/Auth'));
@@ -42,8 +43,8 @@ function App() {
       <BrowserRouter>
         <Suspense fallback={<LoadingFallback />}>
           <Routes>
-            {/* Ana siteye girenleri direkt Giriş/Kayıt sayfasına yolla */}
-            <Route path="/" element={<Navigate to="/auth" replace />} />
+            {/* Ana Sayfa (Tanıtım) */}
+            <Route path="/" element={<Landing />} />
             
             {/* Mekan Sahipleri İçin */}
             <Route path="/auth" element={<Auth />} />

@@ -1,0 +1,237 @@
+import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+
+export default function Landing() {
+  const navigate = useNavigate();
+  const [scrollY, setScrollY] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => setScrollY(window.scrollY);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-[#0A0A0A] text-white font-pixel overflow-x-hidden">
+      {/* Navbar */}
+      <nav className="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
+        style={{ backgroundColor: scrollY > 50 ? 'rgba(10,10,10,0.95)' : 'transparent', backdropFilter: scrollY > 50 ? 'blur(12px)' : 'none' }}>
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-3xl">🍽️</span>
+            <span className="text-2xl font-bold tracking-wider uppercase bg-gradient-to-r from-[#C8A97E] to-[#E8D5B5] bg-clip-text text-transparent">QR Menü</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <button onClick={() => navigate('/auth')} className="px-6 py-2 text-[#C8A97E] border-2 border-[#C8A97E] hover:bg-[#C8A97E] hover:text-[#0A0A0A] transition-all duration-300 font-bold uppercase text-sm tracking-wider">
+              Giriş Yap
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      {/* Hero Section */}
+      <section className="relative min-h-screen flex items-center justify-center px-6 pt-20">
+        {/* Animated background gradient */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#C8A97E]/10 rounded-full blur-[120px] animate-pulse"></div>
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#8fb38a]/10 rounded-full blur-[120px] animate-pulse" style={{animationDelay: '1s'}}></div>
+        </div>
+
+        <div className="relative z-10 text-center max-w-4xl mx-auto">
+          <div className="mb-6 inline-block px-4 py-2 border border-[#C8A97E]/30 rounded-full text-[#C8A97E] text-sm tracking-widest uppercase animate-fade-in">
+            ✨ Dijital Menü Çözümü
+          </div>
+          <h1 className="text-5xl md:text-7xl font-bold mb-8 leading-tight">
+            <span className="bg-gradient-to-r from-[#C8A97E] via-[#E8D5B5] to-[#C8A97E] bg-clip-text text-transparent">Menünüzü</span>
+            <br />
+            <span className="text-white">Dijitale Taşıyın</span>
+          </h1>
+          <p className="text-xl md:text-2xl text-gray-400 mb-12 max-w-2xl mx-auto leading-relaxed">
+            QR kod ile müşterilerinize modern, hızlı ve şık bir menü deneyimi sunun. 
+            Basılı menü maliyetlerinden kurtulun.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <button onClick={() => navigate('/auth')} className="px-10 py-4 bg-gradient-to-r from-[#C8A97E] to-[#A0845C] text-[#0A0A0A] font-bold text-xl uppercase tracking-wider hover:from-[#E8D5B5] hover:to-[#C8A97E] transition-all duration-300 shadow-[0_0_30px_rgba(200,169,126,0.3)] hover:shadow-[0_0_50px_rgba(200,169,126,0.5)] border-2 border-[#C8A97E]">
+              🚀 Hemen Başla
+            </button>
+            <button onClick={() => document.getElementById('features')?.scrollIntoView({behavior: 'smooth'})} className="px-10 py-4 border-2 border-gray-600 text-gray-300 font-bold text-xl uppercase tracking-wider hover:border-[#C8A97E] hover:text-[#C8A97E] transition-all duration-300">
+              Daha Fazla Bilgi ↓
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section id="features" className="py-24 px-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-20">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6">
+              <span className="bg-gradient-to-r from-[#C8A97E] to-[#E8D5B5] bg-clip-text text-transparent">Neden QR Menü?</span>
+            </h2>
+            <p className="text-gray-400 text-xl max-w-2xl mx-auto">Restoranınızı dijital çağa taşıyacak her şey burada.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {/* Feature 1 */}
+            <div className="group p-8 bg-[#111111] border border-[#222222] hover:border-[#C8A97E]/50 transition-all duration-500 hover:-translate-y-2">
+              <div className="text-5xl mb-6">📱</div>
+              <h3 className="text-2xl font-bold mb-4 text-[#E8D5B5]">QR Kod ile Menü</h3>
+              <p className="text-gray-400 leading-relaxed">Müşterileriniz masadaki QR kodu okutarak menünüze anında ulaşsın. Bekleme yok, fiziksel menü yok.</p>
+            </div>
+
+            {/* Feature 2 */}
+            <div className="group p-8 bg-[#111111] border border-[#222222] hover:border-[#C8A97E]/50 transition-all duration-500 hover:-translate-y-2">
+              <div className="text-5xl mb-6">🎨</div>
+              <h3 className="text-2xl font-bold mb-4 text-[#E8D5B5]">Özelleştirilebilir Temalar</h3>
+              <p className="text-gray-400 leading-relaxed">6 farklı tema ile yönetim panelinizi kişiselleştirin. Klasik, Modern, Dracula ve daha fazlası.</p>
+            </div>
+
+            {/* Feature 3 */}
+            <div className="group p-8 bg-[#111111] border border-[#222222] hover:border-[#C8A97E]/50 transition-all duration-500 hover:-translate-y-2">
+              <div className="text-5xl mb-6">📊</div>
+              <h3 className="text-2xl font-bold mb-4 text-[#E8D5B5]">Sipariş Yönetimi</h3>
+              <p className="text-gray-400 leading-relaxed">Masa bazlı sipariş takibi, garson çağırma ve hesap isteme. Tüm siparişler tek panelde.</p>
+            </div>
+
+            {/* Feature 4 */}
+            <div className="group p-8 bg-[#111111] border border-[#222222] hover:border-[#C8A97E]/50 transition-all duration-500 hover:-translate-y-2">
+              <div className="text-5xl mb-6">🏷️</div>
+              <h3 className="text-2xl font-bold mb-4 text-[#E8D5B5]">Kampanya Sistemi</h3>
+              <p className="text-gray-400 leading-relaxed">İndirim kampanyaları oluşturun, kategorilere özel kampanyalar tanımlayın. Müşterilerinizi şaşırtın.</p>
+            </div>
+
+            {/* Feature 5 */}
+            <div className="group p-8 bg-[#111111] border border-[#222222] hover:border-[#C8A97E]/50 transition-all duration-500 hover:-translate-y-2">
+              <div className="text-5xl mb-6">👨‍🍳</div>
+              <h3 className="text-2xl font-bold mb-4 text-[#E8D5B5]">Personel Yönetimi</h3>
+              <p className="text-gray-400 leading-relaxed">Garson ve şef hesapları oluşturun, rol bazlı yetkilendirme ile ekibinizi yönetin.</p>
+            </div>
+
+            {/* Feature 6 */}
+            <div className="group p-8 bg-[#111111] border border-[#222222] hover:border-[#C8A97E]/50 transition-all duration-500 hover:-translate-y-2">
+              <div className="text-5xl mb-6">📈</div>
+              <h3 className="text-2xl font-bold mb-4 text-[#E8D5B5]">İstatistik & Raporlama</h3>
+              <p className="text-gray-400 leading-relaxed">Satış istatistiklerini görüntüleyin, Excel'e aktarın. Veriye dayalı kararlar alın.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Screenshots / How it works */}
+      <section className="py-24 px-6 bg-[#080808]">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-20">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6">
+              <span className="bg-gradient-to-r from-[#8fb38a] to-[#C8A97E] bg-clip-text text-transparent">Nasıl Çalışır?</span>
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+            <div className="text-center">
+              <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-[#C8A97E] to-[#A0845C] flex items-center justify-center text-[#0A0A0A] text-3xl font-bold border-2 border-[#C8A97E]">1</div>
+              <h3 className="text-2xl font-bold mb-4 text-[#E8D5B5]">Kayıt Olun</h3>
+              <p className="text-gray-400">Hızlıca hesap oluşturun ve mekanınızı sisteme ekleyin. 2 dakikadan kısa sürer.</p>
+            </div>
+            <div className="text-center">
+              <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-[#C8A97E] to-[#A0845C] flex items-center justify-center text-[#0A0A0A] text-3xl font-bold border-2 border-[#C8A97E]">2</div>
+              <h3 className="text-2xl font-bold mb-4 text-[#E8D5B5]">Menüyü Düzenleyin</h3>
+              <p className="text-gray-400">Kategoriler oluşturun, ürünleri ekleyin, fiyatları belirleyin. Sürükle-bırak ile sıralayın.</p>
+            </div>
+            <div className="text-center">
+              <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-[#C8A97E] to-[#A0845C] flex items-center justify-center text-[#0A0A0A] text-3xl font-bold border-2 border-[#C8A97E]">3</div>
+              <h3 className="text-2xl font-bold mb-4 text-[#E8D5B5]">QR Kodunuzu Paylaşın</h3>
+              <p className="text-gray-400">Otomatik oluşturulan QR kodunu masalarınıza koyun. Müşteriler okutarak menüye ulaşsın!</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Admin Panel Preview */}
+      <section className="py-24 px-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6">
+              <span className="bg-gradient-to-r from-[#C8A97E] to-[#E8D5B5] bg-clip-text text-transparent">Güçlü Yönetim Paneli</span>
+            </h2>
+            <p className="text-gray-400 text-xl max-w-2xl mx-auto">Her şeyi tek bir yerden yönetin. Menü, siparişler, personel, kampanyalar ve daha fazlası.</p>
+          </div>
+
+          {/* Mock Admin Panel Preview */}
+          <div className="relative mx-auto max-w-4xl">
+            <div className="bg-[#111111] border border-[#333333] rounded-lg overflow-hidden shadow-2xl shadow-[#C8A97E]/5">
+              {/* Fake title bar */}
+              <div className="flex items-center gap-2 px-4 py-3 bg-[#1A1A1A] border-b border-[#333333]">
+                <div className="w-3 h-3 rounded-full bg-[#FF5F57]"></div>
+                <div className="w-3 h-3 rounded-full bg-[#FEBC2E]"></div>
+                <div className="w-3 h-3 rounded-full bg-[#28C840]"></div>
+                <span className="ml-4 text-gray-500 text-sm">Yönetim Paneli — QR Menü</span>
+              </div>
+              {/* Fake dashboard content */}
+              <div className="p-8">
+                <div className="grid grid-cols-3 gap-4 mb-6">
+                  <div className="bg-[#1A1A1A] border border-[#333333] p-4">
+                    <div className="text-gray-500 text-sm mb-1">Toplam Ürün</div>
+                    <div className="text-2xl font-bold text-[#C8A97E]">48</div>
+                  </div>
+                  <div className="bg-[#1A1A1A] border border-[#333333] p-4">
+                    <div className="text-gray-500 text-sm mb-1">Aktif Kampanya</div>
+                    <div className="text-2xl font-bold text-[#8fb38a]">3</div>
+                  </div>
+                  <div className="bg-[#1A1A1A] border border-[#333333] p-4">
+                    <div className="text-gray-500 text-sm mb-1">Bugünkü Sipariş</div>
+                    <div className="text-2xl font-bold text-[#88C0D0]">127</div>
+                  </div>
+                </div>
+                <div className="bg-[#1A1A1A] border border-[#333333] p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="font-bold text-[#E8D5B5]">📋 Kategoriler</span>
+                    <span className="text-sm text-[#C8A97E] border border-[#C8A97E] px-3 py-1">+ Yeni Ekle</span>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center bg-[#222222] px-4 py-2 border-l-4 border-[#C8A97E]">
+                      <span>☕ Sıcak İçecekler</span><span className="text-gray-500">12 ürün</span>
+                    </div>
+                    <div className="flex justify-between items-center bg-[#222222] px-4 py-2 border-l-4 border-[#8fb38a]">
+                      <span>🥤 Soğuk İçecekler</span><span className="text-gray-500">8 ürün</span>
+                    </div>
+                    <div className="flex justify-between items-center bg-[#222222] px-4 py-2 border-l-4 border-[#88C0D0]">
+                      <span>🍰 Tatlılar</span><span className="text-gray-500">6 ürün</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {/* Glow effect */}
+            <div className="absolute -inset-4 bg-gradient-to-r from-[#C8A97E]/5 via-transparent to-[#8fb38a]/5 blur-xl -z-10"></div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-24 px-6 bg-gradient-to-b from-[#0A0A0A] to-[#111111]">
+        <div className="max-w-3xl mx-auto text-center">
+          <h2 className="text-4xl md:text-5xl font-bold mb-8">
+            <span className="text-white">Hazır mısınız?</span>
+          </h2>
+          <p className="text-xl text-gray-400 mb-12">Menünüzü dakikalar içinde dijitale taşıyın. Ücretsiz başlayın, büyüdükçe ölçeklendirin.</p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <button onClick={() => navigate('/auth')} className="px-12 py-5 bg-gradient-to-r from-[#C8A97E] to-[#A0845C] text-[#0A0A0A] font-bold text-2xl uppercase tracking-wider hover:from-[#E8D5B5] hover:to-[#C8A97E] transition-all duration-300 shadow-[0_0_30px_rgba(200,169,126,0.3)] hover:shadow-[0_0_50px_rgba(200,169,126,0.5)] border-2 border-[#C8A97E]">
+              Giriş Yap / Kayıt Ol
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="py-12 px-6 border-t border-[#222222]">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">🍽️</span>
+            <span className="text-xl font-bold text-[#C8A97E]">QR Menü</span>
+          </div>
+          <p className="text-gray-500 text-sm">© 2026 QR Menü. Tüm hakları saklıdır.</p>
+        </div>
+      </footer>
+    </div>
+  );
+}
