@@ -189,7 +189,7 @@ function FeatureCard({ icon, title, description, preview, index }: { icon: strin
   const shaderConfig = getShaderConfig(index);
 
   return (
-    <div className="group relative h-96 rounded-3xl transition-all duration-500 hover:-translate-y-2">
+    <div className="group relative h-96 rounded-3xl transition-all duration-500 hover:-translate-y-2 hover:z-[100]">
       <div className="absolute inset-0 rounded-3xl overflow-hidden opacity-30 group-hover:opacity-80 transition-opacity duration-500">
         <Warp
           style={{ height: "100%", width: "100%" }}
