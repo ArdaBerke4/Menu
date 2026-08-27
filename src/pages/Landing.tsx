@@ -175,11 +175,11 @@ function PreviewStats() {
 const getShaderConfig = (index: number) => {
   const configs = [
     { proportion: 0.3, softness: 0.8, distortion: 0.15, swirl: 0.6, swirlIterations: 8, shape: "checks" as const, shapeScale: 0.08, colors: ["#C8A97E", "#111111", "#8fb38a", "#0F0F0F"] },
-    { proportion: 0.4, softness: 1.2, distortion: 0.2, swirl: 0.9, swirlIterations: 12, shape: "dots" as const, shapeScale: 0.12, colors: ["#8fb38a", "#111111", "#C8A97E", "#0A0A0A"] },
+    { proportion: 0.4, softness: 1.2, distortion: 0.2, swirl: 0.9, swirlIterations: 12, shape: "stripes" as const, shapeScale: 0.12, colors: ["#8fb38a", "#111111", "#C8A97E", "#0A0A0A"] },
     { proportion: 0.35, softness: 0.9, distortion: 0.18, swirl: 0.7, swirlIterations: 10, shape: "checks" as const, shapeScale: 0.1, colors: ["#88C0D0", "#111111", "#C8A97E", "#1A1A1A"] },
-    { proportion: 0.45, softness: 1.1, distortion: 0.22, swirl: 0.8, swirlIterations: 15, shape: "dots" as const, shapeScale: 0.09, colors: ["#C8A97E", "#0A0A0A", "#88C0D0", "#111111"] },
+    { proportion: 0.45, softness: 1.1, distortion: 0.22, swirl: 0.8, swirlIterations: 15, shape: "stripes" as const, shapeScale: 0.09, colors: ["#C8A97E", "#0A0A0A", "#88C0D0", "#111111"] },
     { proportion: 0.38, softness: 0.95, distortion: 0.16, swirl: 0.85, swirlIterations: 11, shape: "checks" as const, shapeScale: 0.11, colors: ["#8fb38a", "#0F0F0F", "#C8A97E", "#111111"] },
-    { proportion: 0.42, softness: 1.0, distortion: 0.19, swirl: 0.75, swirlIterations: 9, shape: "dots" as const, shapeScale: 0.13, colors: ["#88C0D0", "#1A1A1A", "#8fb38a", "#0A0A0A"] },
+    { proportion: 0.42, softness: 1.0, distortion: 0.19, swirl: 0.75, swirlIterations: 9, shape: "stripes" as const, shapeScale: 0.13, colors: ["#88C0D0", "#1A1A1A", "#8fb38a", "#0A0A0A"] },
   ];
   return configs[index % configs.length];
 };
