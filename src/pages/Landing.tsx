@@ -322,18 +322,21 @@ export default function Landing() {
               preview={<PreviewOrders />}
             />
             <FeatureCard
+              index={3}
               icon="🏷️"
               title="Kampanya Sistemi"
               description="İndirim kampanyaları oluşturun, kategorilere özel kampanyalar tanımlayın. Müşterilerinizi şaşırtın."
               preview={<PreviewCampaigns />}
             />
             <FeatureCard
+              index={4}
               icon="👨‍🍳"
               title="Personel Yönetimi"
               description="Garson ve şef hesapları oluşturun, rol bazlı yetkilendirme ile ekibinizi yönetin."
               preview={<PreviewStaff />}
             />
             <FeatureCard
+              index={5}
               icon="📈"
               title="İstatistik & Raporlama"
               description="Satış istatistiklerini görüntüleyin, Excel'e aktarın. Veriye dayalı kararlar alın."
