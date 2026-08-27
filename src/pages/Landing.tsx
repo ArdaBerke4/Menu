@@ -301,18 +301,21 @@ export default function Landing() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             <FeatureCard
+              index={0}
               icon="📱"
               title="QR Kod ile Menü"
               description="Müşterileriniz masadaki QR kodu okutarak menünüze anında ulaşsın. Bekleme yok, fiziksel menü yok."
               preview={<PreviewQR />}
             />
             <FeatureCard
+              index={1}
               icon="🎨"
               title="Özelleştirilebilir Temalar"
               description="6 farklı tema ile yönetim panelinizi kişiselleştirin. Klasik, Modern, Dracula ve daha fazlası."
               preview={<PreviewThemes />}
             />
             <FeatureCard
+              index={2}
               icon="📊"
               title="Sipariş Yönetimi"
               description="Masa bazlı sipariş takibi, garson çağırma ve hesap isteme. Tüm siparişler tek panelde."
