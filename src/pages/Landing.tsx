@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { Boxes } from '../components/ui/background-boxes';
+import { Warp } from '@paper-design/shaders-react';
 
 /* ---- Mini preview components for each feature card ---- */
 function PreviewQR() {
@@ -171,30 +172,61 @@ function PreviewStats() {
   );
 }
 
+const getShaderConfig = (index: number) => {
+  const configs = [
+    { proportion: 0.3, softness: 0.8, distortion: 0.15, swirl: 0.6, swirlIterations: 8, shape: "checks" as const, shapeScale: 0.08, colors: ["#C8A97E", "#111111", "#8fb38a", "#0F0F0F"] },
+    { proportion: 0.4, softness: 1.2, distortion: 0.2, swirl: 0.9, swirlIterations: 12, shape: "dots" as const, shapeScale: 0.12, colors: ["#8fb38a", "#111111", "#C8A97E", "#0A0A0A"] },
+    { proportion: 0.35, softness: 0.9, distortion: 0.18, swirl: 0.7, swirlIterations: 10, shape: "checks" as const, shapeScale: 0.1, colors: ["#88C0D0", "#111111", "#C8A97E", "#1A1A1A"] },
+    { proportion: 0.45, softness: 1.1, distortion: 0.22, swirl: 0.8, swirlIterations: 15, shape: "dots" as const, shapeScale: 0.09, colors: ["#C8A97E", "#0A0A0A", "#88C0D0", "#111111"] },
+    { proportion: 0.38, softness: 0.95, distortion: 0.16, swirl: 0.85, swirlIterations: 11, shape: "checks" as const, shapeScale: 0.11, colors: ["#8fb38a", "#0F0F0F", "#C8A97E", "#111111"] },
+    { proportion: 0.42, softness: 1.0, distortion: 0.19, swirl: 0.75, swirlIterations: 9, shape: "dots" as const, shapeScale: 0.13, colors: ["#88C0D0", "#1A1A1A", "#8fb38a", "#0A0A0A"] },
+  ];
+  return configs[index % configs.length];
+};
+
 /* ---- Feature Card with hover preview ---- */
-function FeatureCard({ icon, title, description, preview }: { icon: string; title: string; description: string; preview: React.ReactNode }) {
+function FeatureCard({ icon, title, description, preview, index }: { icon: string; title: string; description: string; preview: React.ReactNode; index: number }) {
+  const shaderConfig = getShaderConfig(index);
+
   return (
-    <div className="group relative p-8 bg-[#111111] border border-[#222222] hover:border-[#C8A97E]/50 transition-all duration-500 hover:-translate-y-2">
-      <div className="text-5xl mb-6">{icon}</div>
-      <h3 className="text-2xl font-bold mb-4 text-[#E8D5B5]">{title}</h3>
-      <p className="text-gray-400 leading-relaxed">{description}</p>
-      
-      {/* Hover Preview */}
-      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-4 w-[420px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform group-hover:-translate-y-0 translate-y-4 z-50 pointer-events-none">
-        <div className="bg-[#0F0F0F] border border-[#C8A97E]/30 rounded-lg overflow-hidden shadow-2xl shadow-[#C8A97E]/10">
-          {/* Fake title bar */}
-          <div className="flex items-center gap-1.5 px-3 py-2 bg-[#1A1A1A] border-b border-[#333]">
-            <div className="w-2 h-2 rounded-full bg-[#FF5F57]"></div>
-            <div className="w-2 h-2 rounded-full bg-[#FEBC2E]"></div>
-            <div className="w-2 h-2 rounded-full bg-[#28C840]"></div>
-            <span className="ml-2 text-gray-500 text-[10px] font-pixel">{title}</span>
+    <div className="group relative h-96 rounded-3xl transition-all duration-500 hover:-translate-y-2">
+      <div className="absolute inset-0 rounded-3xl overflow-hidden opacity-30 group-hover:opacity-80 transition-opacity duration-500">
+        <Warp
+          style={{ height: "100%", width: "100%" }}
+          proportion={shaderConfig.proportion}
+          softness={shaderConfig.softness}
+          distortion={shaderConfig.distortion}
+          swirl={shaderConfig.swirl}
+          swirlIterations={shaderConfig.swirlIterations}
+          shape={shaderConfig.shape}
+          shapeScale={shaderConfig.shapeScale}
+          scale={1}
+          rotation={0}
+          speed={0.8}
+          colors={shaderConfig.colors}
+        />
+      </div>
+
+      <div className="relative z-10 p-8 rounded-3xl h-full flex flex-col bg-black/70 border border-[#C8A97E]/20 hover:border-[#C8A97E]/50 transition-colors duration-300">
+        <div className="text-5xl mb-6 filter drop-shadow-lg">{icon}</div>
+        <h3 className="text-2xl font-bold mb-4 text-[#E8D5B5]">{title}</h3>
+        <p className="leading-relaxed flex-grow text-gray-300 font-medium">{description}</p>
+        
+        {/* Hover Preview Box */}
+        <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-4 w-[420px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform group-hover:-translate-y-0 translate-y-4 z-50 pointer-events-none">
+          <div className="bg-[#0F0F0F] border border-[#C8A97E]/30 rounded-lg overflow-hidden shadow-2xl shadow-[#C8A97E]/10">
+            <div className="flex items-center gap-1.5 px-3 py-2 bg-[#1A1A1A] border-b border-[#333]">
+              <div className="w-2 h-2 rounded-full bg-[#FF5F57]"></div>
+              <div className="w-2 h-2 rounded-full bg-[#FEBC2E]"></div>
+              <div className="w-2 h-2 rounded-full bg-[#28C840]"></div>
+              <span className="ml-2 text-gray-500 text-[10px] font-pixel">{title}</span>
+            </div>
+            <div className="p-5 backdrop-blur-sm">
+              {preview}
+            </div>
           </div>
-          <div className="p-5">
-            {preview}
-          </div>
+          <div className="absolute left-1/2 -translate-x-1/2 -bottom-2 w-4 h-4 bg-[#0F0F0F] border-r border-b border-[#C8A97E]/30 rotate-45"></div>
         </div>
-        {/* Arrow */}
-        <div className="absolute left-1/2 -translate-x-1/2 -bottom-2 w-4 h-4 bg-[#0F0F0F] border-r border-b border-[#C8A97E]/30 rotate-45"></div>
       </div>
     </div>
   );
