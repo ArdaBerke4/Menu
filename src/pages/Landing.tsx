@@ -266,24 +266,23 @@ export default function Landing() {
         <Boxes />
 
         <div className="relative z-20 text-center max-w-4xl mx-auto mt-10 pointer-events-none">
-          <div className="mb-6 inline-block px-4 py-2 border border-[#C8A97E]/30 rounded-full text-[#C8A97E] text-sm tracking-widest uppercase animate-fade-in bg-black/50 backdrop-blur-sm">
-            ✨ Dijital Menü Çözümü
+          <div className="mb-6 inline-block px-4 py-1.5 border border-white/10 rounded text-neutral-400 text-xs tracking-[0.2em] uppercase animate-fade-in bg-black/40 backdrop-blur-md">
+            Ücretsiz QR Menü Sistemi
           </div>
-          <h1 className="text-5xl md:text-7xl font-bold mb-8 leading-tight drop-shadow-2xl">
-            <span className="bg-gradient-to-r from-[#C8A97E] via-[#E8D5B5] to-[#C8A97E] bg-clip-text text-transparent pointer-events-auto">Menünüzü</span>
+          <h1 className="text-5xl md:text-7xl font-bold mb-8 leading-tight tracking-tight text-white drop-shadow-lg">
+            <span className="pointer-events-auto">Restoranınız İçin</span>
             <br />
-            <span className="text-white pointer-events-auto">Dijitale Taşıyın</span>
+            <span className="text-[#E8D5B5] pointer-events-auto">Akıllı Menü</span>
           </h1>
-          <p className="text-xl md:text-2xl text-gray-300 mb-12 max-w-2xl mx-auto leading-relaxed drop-shadow-md bg-black/20 p-2 rounded-lg backdrop-blur-sm pointer-events-auto">
-            QR kod ile müşterilerinize modern, hızlı ve şık bir menü deneyimi sunun. 
-            Basılı menü maliyetlerinden kurtulun.
+          <p className="text-lg md:text-xl text-neutral-300 mb-12 max-w-2xl mx-auto leading-relaxed drop-shadow-md bg-black/40 p-4 rounded-xl backdrop-blur-md pointer-events-auto border border-white/5">
+            Fiziksel menüleri geride bırakın. Saniyeler içinde kendi QR menünüzü oluşturun, siparişleri ve personelinizi tek bir panelden yönetin.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pointer-events-auto">
-            <button onClick={() => navigate('/auth')} className="px-10 py-4 bg-gradient-to-r from-[#C8A97E] to-[#A0845C] text-[#0A0A0A] font-bold text-xl uppercase tracking-wider hover:from-[#E8D5B5] hover:to-[#C8A97E] transition-all duration-300 shadow-[0_0_30px_rgba(200,169,126,0.3)] hover:shadow-[0_0_50px_rgba(200,169,126,0.5)] border-2 border-[#C8A97E]">
-              🚀 Hemen Başla
+            <button onClick={() => navigate('/auth')} className="px-8 py-4 bg-white text-black font-bold text-lg uppercase tracking-wider hover:bg-neutral-200 transition-all duration-300 shadow-xl border border-transparent">
+              Hemen Başla
             </button>
-            <button onClick={() => document.getElementById('features')?.scrollIntoView({behavior: 'smooth'})} className="px-10 py-4 border-2 border-gray-500 bg-black/30 backdrop-blur-sm text-white font-bold text-xl uppercase tracking-wider hover:border-[#C8A97E] hover:text-[#C8A97E] transition-all duration-300">
-              Daha Fazla Bilgi ↓
+            <button onClick={() => document.getElementById('features')?.scrollIntoView({behavior: 'smooth'})} className="px-8 py-4 border border-white/20 bg-black/40 backdrop-blur-md text-white font-bold text-lg uppercase tracking-wider hover:bg-white/10 transition-all duration-300">
+              Daha Fazla Bilgi
             </button>
           </div>
         </div>
